@@ -3,64 +3,215 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Payslip Upload Portal</title>
+  <title>Admin Portal</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f7fafc; padding: 30px; display: flex; justify-content: center; }
-    .container { width: 100%; max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; color: #1a202c; text-align: center; }
-    .upload-box { border: 2px dashed #cbd5e0; padding: 30px; text-align: center; border-radius: 8px; margin-top: 20px; background: #faf5ff; }
-    input[type="file"] { margin-bottom: 15px; }
-    button { padding: 12px 20px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
+    body { background-color: #f7fafc; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    
+    /* LOGIN CONTAINER */
+    .login-container { width: 100%; max-width: 400px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 50px; }
+    .login-container h2 { text-align: center; margin-top: 0; color: #2d3748; }
+    .input-group { margin-bottom: 15px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 13px; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+    button { width: 100%; padding: 11px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
     button:hover { background: #2b6cb0; }
-    #uploadStatus { margin-top: 15px; font-weight: bold; font-size: 14px; text-align: center; }
+    .error-msg { color: #e53e3e; font-size: 13px; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
 
-    /* MODAL POPUP STYLES */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-    .modal-content h3 { margin-top: 0; color: #e53e3e; font-size: 18px; }
-    .modal-content p { color: #4a5568; font-size: 14px; line-height: 1.4; }
-    .modal-input { width: 100%; padding: 10px; margin-top: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-    .btn-cancel { background: #a0aec0; }
-    .btn-cancel:hover { background: #718096; }
-    .btn-override { background: #e53e3e; }
-    .btn-override:hover { background: #c53030; }
-    .modal-error { color: #e53e3e; font-size: 13px; font-weight: bold; margin-top: 10px; display: none; }
+    /* DASHBOARD LAYOUT */
+    .dashboard { display: none; width: 100%; max-width: 1100px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px; }
+    
+    /* NAV BUTTONS */
+    .nav-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+    .nav-btn { flex: 1; padding: 12px; background: #edf2f7; color: #4a5568; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; }
+    .nav-btn.active { background: #3182ce; color: white; }
+
+    /* SECTIONS */
+    .section-content { display: none; }
+    .section-content.active { display: block; }
+
+    /* FORM CARDS */
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .card h3 { margin-top: 0; color: #2d3748; font-size: 16px; border-bottom: 1px solid #cbd5e0; padding-bottom: 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+    /* TABLES */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th { background: #edf2f7; padding: 10px; text-align: left; color: #4a5568; border-bottom: 2px solid #cbd5e0; }
+    td { padding: 10px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
+
+    /* TABS FOR CLIENT DATA */
+    .tabs-header { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; overflow-x: auto; margin-bottom: 15px; }
+    .tab-item { padding: 8px 16px; cursor: pointer; font-weight: bold; color: #718096; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .tab-item.active { color: #3182ce; border-bottom-color: #3182ce; }
+
+    /* TOGGLE SWITCH */
+    .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e0; transition: .3s; border-radius: 22px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: #48bb78; }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    /* MODAL POPUP */
+    .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:999; }
+    .modal-card { background:white; padding:25px; border-radius:8px; width:90%; max-width:420px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-red { background: #e53e3e; } .btn-red:hover { background: #c53030; }
+    .btn-gray { background: #718096; } .btn-gray:hover { background: #4a5568; }
   </style>
 
-  <!-- SheetJS to parse Excel files -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <div class="container">
-    <h2>ADMIN PAYSLIP UPLOADER</h2>
-    <div class="upload-box">
-      <input type="file" id="excelFile" accept=".xlsx, .xls">
-      <br>
-      <button onclick="startUpload()">UPLOAD PAYSLIP SHEET</button>
+  <!-- 1. LOGIN SCREEN -->
+  <div id="loginScreen" class="login-container">
+    <h2>ADMIN LOGIN</h2>
+    <div class="input-group">
+      <label>ADMIN ID</label>
+      <input type="text" id="loginAdminId" placeholder="e.g. IS-058">
     </div>
-    <div id="uploadStatus"></div>
+    <div class="input-group">
+      <label>6-DIGIT PIN</label>
+      <input type="password" id="loginPin" placeholder="ENTER PIN">
+    </div>
+    <button onclick="handleLogin()">LOGIN</button>
+    <div id="loginError" class="error-msg"></div>
   </div>
 
-  <!-- OVERRIDE CONFIRMATION MODAL -->
+  <!-- 2. DASHBOARD SCREEN -->
+  <div id="dashScreen" class="dashboard">
+    <div class="dash-header">
+      <div>
+        <h2 style="margin:0;">PAYSLIP MANAGEMENT PORTAL</h2>
+        <span id="currentAdminTag" style="font-size:12px; color:#718096;">LOGGED IN AS: -</span>
+      </div>
+      <button onclick="handleLogout()" style="width:auto; padding: 8px 15px; background:#e53e3e;">LOGOUT</button>
+    </div>
+
+    <!-- MAIN UPLOAD CONTAINER -->
+    <div class="card">
+      <h3>UPLOAD PAYSLIP FILE</h3>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="file" id="payslipExcelFile" accept=".xlsx, .xls">
+        <button onclick="initiatePayslipUpload()" style="width: 200px;">UPLOAD SHEET</button>
+      </div>
+      <div id="uploadStatusText" style="margin-top:10px; font-weight:bold; font-size:13px;"></div>
+    </div>
+
+    <!-- MAIN NAV BUTTONS -->
+    <div class="nav-buttons">
+      <button class="nav-btn active" onclick="switchNav('users')">USERS</button>
+      <button class="nav-btn" onclick="switchNav('payslipData')">PAYSLIP DATA</button>
+      <button class="nav-btn" onclick="switchNav('history')">HISTORY</button>
+    </div>
+
+    <!-- TAB 1: USERS SECTION -->
+    <div id="secUsers" class="section-content active">
+      <div class="grid-2">
+        <!-- Manual Add -->
+        <div class="card">
+          <h3>MANUALLY ADD USER</h3>
+          <div class="input-group">
+            <label>USER ID</label>
+            <input type="text" id="newUserId" placeholder="ENTER ID">
+          </div>
+          <div class="input-group">
+            <label>PIN (6-DIGIT)</label>
+            <input type="password" id="newUserPin" placeholder="ENTER PIN">
+          </div>
+          <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
+            <label style="margin:0;">CAN OVERRIDE DUPLICATES?</label>
+            <label class="switch">
+              <input type="checkbox" id="newUserOverride">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <button onclick="saveSingleUser()">ADD USER</button>
+        </div>
+
+        <!-- Bulk Upload Users -->
+        <div class="card">
+          <h3>BULK ADD USERS (EXCEL)</h3>
+          <p style="font-size:12px; color:#718096; margin-top:0;">Columns: <b>Col A</b> = ID | <b>Col B</b> = PIN | <b>Col C</b> = TRUE/FALSE or ON/OFF (Override Switch)</p>
+          <input type="file" id="userExcelFile" accept=".xlsx, .xls" style="margin-bottom:15px;">
+          <button onclick="uploadBulkUsers()">UPLOAD USERS EXCEL</button>
+        </div>
+      </div>
+
+      <!-- Users List -->
+      <div class="card">
+        <h3>REGISTERED ADMIN USERS</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>USER ID</th>
+              <th>ALLOW OVERRIDE?</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: PAYSLIP DATA SECTION -->
+    <div id="secPayslipData" class="section-content">
+      <div class="card">
+        <h3>CLIENT DATA TABULATION</h3>
+        <!-- Dynamic Client Tabs -->
+        <div class="tabs-header" id="clientTabsContainer"></div>
+        <!-- Client Content Table -->
+        <div id="clientTableContainer">Select a client tab above to view records.</div>
+      </div>
+    </div>
+
+    <!-- TAB 3: HISTORY SECTION -->
+    <div id="secHistory" class="section-content">
+      <div class="card">
+        <h3>FILE UPLOAD HISTORY</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>DATE & TIME</th>
+              <th>ADMIN ID</th>
+              <th>FILE NAME</th>
+              <th>CLIENT</th>
+              <th>PAYROLL DATE</th>
+              <th>ACTION TYPE</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- OVERRIDE VERIFICATION MODAL -->
   <div id="overrideModal" class="modal-overlay">
-    <div class="modal-content">
-      <h3>DUPLICATE PAYSLIP DETECTED</h3>
-      <p id="modalDetailText">A payslip batch with matching Client, Payroll Date, and Cut-off Date already exists.</p>
-      <p><strong>Would you like to override/replace the previous file?</strong></p>
-      
-      <input type="text" id="adminId" class="modal-input" placeholder="ENTER ADMIN ID">
-      <input type="password" id="adminPassword" class="modal-input" placeholder="ENTER ADMIN PASSWORD">
-      <div id="modalError" class="modal-error"></div>
+    <div class="modal-card">
+      <h3 style="color:#e53e3e; margin-top:0;">DUPLICATE RECORD DETECTED</h3>
+      <p id="modalDetailText" style="font-size:13px; color:#4a5568;"></p>
+      <p style="font-size:13px; font-weight:bold;">Enter credentials with Override Permission to proceed:</p>
+
+      <div class="input-group">
+        <label>ADMIN ID</label>
+        <input type="text" id="authAdminId">
+      </div>
+      <div class="input-group">
+        <label>PIN</label>
+        <input type="password" id="authPin">
+      </div>
+      <div id="modalErr" class="error-msg"></div>
 
       <div class="modal-actions">
-        <button class="btn-cancel" onclick="closeModal()">CANCEL</button>
-        <button class="btn-override" onclick="confirmOverride()">OVERRIDE & REPLACE</button>
+        <button class="btn-gray" onclick="closeModal()">CANCEL</button>
+        <button class="btn-red" onclick="verifyAndOverride()">CONFIRM OVERRIDE</button>
       </div>
     </div>
   </div>
@@ -79,51 +230,200 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let pendingUploadData = null; // Store workbook context temporarily during prompt
+    let loggedInUser = null;
+    let pendingUploadData = null;
 
-    function startUpload() {
-      const fileInput = document.getElementById("excelFile");
-      const statusDiv = document.getElementById("uploadStatus");
+    // --- INITIALIZATION ---
+    window.onload = async function() {
+      // Seed Master Admin (IS-058 / 101992) if not existing
+      const masterRef = db.collection("admin_users").doc("IS-058");
+      const masterDoc = await masterRef.get();
+      if (!masterDoc.exists) {
+        await masterRef.set({ pin: "101992", canOverride: true });
+      }
+    };
+
+    // --- 1. LOGIN / LOGOUT ---
+    async function handleLogin() {
+      const id = document.getElementById("loginAdminId").value.trim().toUpperCase();
+      const pin = document.getElementById("loginPin").value.trim();
+      const err = document.getElementById("loginError");
+      err.style.display = "none";
+
+      if (!id || !pin) {
+        err.innerText = "PLEASE ENTER BOTH ID AND PIN.";
+        err.style.display = "block";
+        return;
+      }
+
+      const doc = await db.collection("admin_users").doc(id).get();
+      if (doc.exists && doc.data().pin === pin) {
+        loggedInUser = { id: id, canOverride: doc.data().canOverride || false };
+        document.getElementById("currentAdminTag").innerText = `LOGGED IN AS: ${id}`;
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("dashScreen").style.display = "block";
+        loadUsersList();
+      } else {
+        err.innerText = "INVALID ADMIN ID OR PIN.";
+        err.style.display = "block";
+      }
+    }
+
+    function handleLogout() {
+      loggedInUser = null;
+      document.getElementById("dashScreen").style.display = "none";
+      document.getElementById("loginScreen").style.display = "block";
+    }
+
+    // --- NAV SWITCHER ---
+    function switchNav(nav) {
+      document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".section-content").forEach(sec => sec.classList.remove("active"));
+
+      if (nav === 'users') {
+        event.target.classList.add("active");
+        document.getElementById("secUsers").classList.add("active");
+        loadUsersList();
+      } else if (nav === 'payslipData') {
+        event.target.classList.add("active");
+        document.getElementById("secPayslipData").classList.add("active");
+        loadPayslipDataTabs();
+      } else if (nav === 'history') {
+        event.target.classList.add("active");
+        document.getElementById("secHistory").classList.add("active");
+        loadHistoryList();
+      }
+    }
+
+    // --- 2. USERS MANAGEMENT ---
+    async function saveSingleUser() {
+      const id = document.getElementById("newUserId").value.trim().toUpperCase();
+      const pin = document.getElementById("newUserPin").value.trim();
+      const canOverride = document.getElementById("newUserOverride").checked;
+
+      if (!id || !pin) { alert("Please enter User ID and PIN."); return; }
+
+      await db.collection("admin_users").doc(id).set({ pin: pin, canOverride: canOverride });
+      alert(`User ${id} saved successfully!`);
+      document.getElementById("newUserId").value = "";
+      document.getElementById("newUserPin").value = "";
+      document.getElementById("newUserOverride").checked = false;
+      loadUsersList();
+    }
+
+    async function uploadBulkUsers() {
+      const fileInput = document.getElementById("userExcelFile");
+      if (!fileInput.files.length) { alert("Select an Excel file first."); return; }
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const range = XLSX.utils.decode_range(sheet['!ref']);
+
+        const batch = db.batch();
+        let count = 0;
+
+        for (let R = 0; R <= range.e.r; ++R) {
+          const idCell = sheet[XLSX.utils.encode_cell({ r: R, c: 0 })];
+          const pinCell = sheet[XLSX.utils.encode_cell({ r: R, c: 1 })];
+          const overrideCell = sheet[XLSX.utils.encode_cell({ r: R, c: 2 })];
+
+          if (!idCell || !pinCell) continue;
+
+          const uid = String(idCell.v).trim().toUpperCase();
+          const upin = String(pinCell.v).trim();
+          const ovVal = overrideCell ? String(overrideCell.v).trim().toLowerCase() : "";
+          const canOverride = (ovVal === 'true' || ovVal === 'on' || ovVal === '1' || ovVal === 'yes');
+
+          const ref = db.collection("admin_users").doc(uid);
+          batch.set(ref, { pin: upin, canOverride: canOverride });
+          count++;
+        }
+
+        await batch.commit();
+        alert(`Successfully uploaded ${count} users!`);
+        loadUsersList();
+      };
+      reader.readAsArrayBuffer(fileInput.files[0]);
+    }
+
+    async function loadUsersList() {
+      const tbody = document.getElementById("userTableBody");
+      tbody.innerHTML = "<tr><td colspan='3'>Loading users...</td></tr>";
+
+      const snapshot = await db.collection("admin_users").get();
+      tbody.innerHTML = "";
+
+      snapshot.forEach(doc => {
+        const u = doc.data();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><b>${doc.id}</b></td>
+          <td>
+            <label class="switch">
+              <input type="checkbox" ${u.canOverride ? 'checked' : ''} onchange="toggleUserOverride('${doc.id}', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td><button style="background:#e53e3e; padding:4px 8px; font-size:11px;" onclick="deleteUser('${doc.id}')">DELETE</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function toggleUserOverride(uid, state) {
+      await db.collection("admin_users").doc(uid).update({ canOverride: state });
+    }
+
+    async function deleteUser(uid) {
+      if (uid === "IS-058") { alert("Master admin cannot be deleted."); return; }
+      if (confirm(`Delete user ${uid}?`)) {
+        await db.collection("admin_users").doc(uid).delete();
+        loadUsersList();
+      }
+    }
+
+    // --- 3. PAYSLIP FILE UPLOADER & OVERRIDE LOGIC ---
+    function initiatePayslipUpload() {
+      const fileInput = document.getElementById("payslipExcelFile");
+      const statusDiv = document.getElementById("uploadStatusText");
 
       if (!fileInput.files.length) {
-        statusDiv.innerHTML = "<span style='color:red;'>Please select an Excel file first.</span>";
+        statusDiv.innerHTML = "<span style='color:red;'>Select an Excel file first.</span>";
         return;
       }
 
       const file = fileInput.files[0];
       const reader = new FileReader();
+      statusDiv.innerText = "Analyzing file contents...";
 
-      statusDiv.innerText = "Reading file...";
-
-      reader.onload = async function (e) {
+      reader.onload = async function(e) {
         try {
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: "array" });
-          const firstSheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[firstSheetName];
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-          // Extract header info
           const company = (sheet["A1"] ? sheet["A1"].v : "").toString().trim().toUpperCase();
           const clientName = (sheet["A2"] ? sheet["A2"].v : "").toString().trim().toUpperCase();
           const payrollDate = (sheet["A3"] ? sheet["A3"].v : "").toString().trim().toUpperCase();
           const payrollPeriod = (sheet["A4"] ? sheet["A4"].v : "").toString().trim().toUpperCase();
 
           if (!clientName || !payrollDate || !payrollPeriod) {
-            statusDiv.innerHTML = "<span style='color:red;'>ERROR: Missing header info in A2, A3, or A4.</span>";
+            statusDiv.innerHTML = "<span style='color:red;'>Error: Cells A2, A3, or A4 are empty.</span>";
             return;
           }
 
-          statusDiv.innerText = "Checking for duplicate records...";
-
-          // Query Firestore for duplicates matching A2, A3, and A4
+          // Check duplicates
           const dupQuery = await db.collection("payslips")
             .where("client", "==", clientName)
             .where("payrollDate", "==", payrollDate)
             .where("payrollPeriod", "==", payrollPeriod)
             .get();
 
-          // Save parsed context for later if user decides to override
           pendingUploadData = {
+            file: file,
             sheet: sheet,
             company: company,
             clientName: clientName,
@@ -133,86 +433,85 @@
           };
 
           if (!dupQuery.empty) {
-            // DUPLICATE FOUND: Show modal
-            statusDiv.innerHTML = "<span style='color:orange;'>Duplicate found. Waiting for override confirmation...</span>";
+            // DUPLICATE ENCOUNTERED
             document.getElementById("modalDetailText").innerHTML = 
-              `<strong>Duplicate Batch Found:</strong><br>` +
-              `• Client: <b>${clientName}</b><br>` +
-              `• Payroll Date: <b>${payrollDate}</b><br>` +
-              `• Cut-off Period: <b>${payrollPeriod}</b>`;
+              `Duplicate Batch Detected:<br>` +
+              `• <b>Client:</b> ${clientName}<br>` +
+              `• <b>Payroll Date:</b> ${payrollDate}<br>` +
+              `• <b>Cut-off Date:</b> ${payrollPeriod}`;
             openModal();
           } else {
-            // NO DUPLICATE: Directly upload
-            await processBatchUpload(false);
+            // NO DUPLICATE: Upload normally
+            await executeBatchSave(false, loggedInUser.id);
           }
 
         } catch (err) {
-          console.error(err);
-          statusDiv.innerHTML = `<span style='color:red;'>ERROR: ${err.message}</span>`;
+          statusDiv.innerHTML = `<span style='color:red;'>Error: ${err.message}</span>`;
         }
       };
-
       reader.readAsArrayBuffer(file);
     }
 
     function openModal() {
-      document.getElementById("adminId").value = "";
-      document.getElementById("adminPassword").value = "";
-      document.getElementById("modalError").style.display = "none";
+      document.getElementById("authAdminId").value = "";
+      document.getElementById("authPin").value = "";
+      document.getElementById("modalErr").style.display = "none";
       document.getElementById("overrideModal").style.display = "flex";
     }
 
     function closeModal() {
       document.getElementById("overrideModal").style.display = "none";
-      document.getElementById("uploadStatus").innerHTML = "<span style='color:red;'>Upload cancelled by user.</span>";
+      document.getElementById("uploadStatusText").innerHTML = "<span style='color:red;'>Upload cancelled.</span>";
       pendingUploadData = null;
     }
 
-    async function confirmOverride() {
-      const adminId = document.getElementById("adminId").value.trim();
-      const adminPassword = document.getElementById("adminPassword").value.trim();
-      const modalError = document.getElementById("modalError");
+    async function verifyAndOverride() {
+      const authId = document.getElementById("authAdminId").value.trim().toUpperCase();
+      const authPin = document.getElementById("authPin").value.trim();
+      const err = document.getElementById("modalErr");
 
-      if (!adminId || !adminPassword) {
-        modalError.innerText = "PLEASE ENTER BOTH ADMIN ID AND PASSWORD.";
-        modalError.style.display = "block";
+      if (!authId || !authPin) {
+        err.innerText = "PLEASE ENTER BOTH ID AND PIN.";
+        err.style.display = "block";
         return;
       }
 
-      // Verify Admin credentials from Firestore ("admin_users" collection)
-      const adminDoc = await db.collection("admin_users").doc(adminId).get();
-      if (!adminDoc.exists || adminDoc.data().password !== adminPassword) {
-        modalError.innerText = "INVALID ADMIN ID OR PASSWORD.";
-        modalError.style.display = "block";
+      const doc = await db.collection("admin_users").doc(authId).get();
+      if (!doc.exists || doc.data().pin !== authPin) {
+        err.innerText = "INVALID ADMIN CREDENTIALS.";
+        err.style.display = "block";
         return;
       }
 
-      // Credentials verified, close modal and process override
+      if (!doc.data().canOverride) {
+        err.innerText = "THIS ID DOES NOT HAVE OVERRIDE PERMISSIONS.";
+        err.style.display = "block";
+        return;
+      }
+
+      // Authorization passed
       document.getElementById("overrideModal").style.display = "none";
-      await processBatchUpload(true);
+      await executeBatchSave(true, authId);
     }
 
-    async function processBatchUpload(isOverride) {
-      const statusDiv = document.getElementById("uploadStatus");
-      const data = pendingUploadData;
+    async function executeBatchSave(isOverride, actingAdminId) {
+      const statusDiv = document.getElementById("uploadStatusText");
+      const pData = pendingUploadData;
 
-      if (isOverride && data.existingDocs && data.existingDocs.length > 0) {
-        statusDiv.innerText = "Deleting old duplicate records...";
-        // Delete all old records in batches
-        const deleteBatch = db.batch();
-        data.existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
-        await deleteBatch.commit();
+      if (isOverride) {
+        statusDiv.innerText = "Deleting duplicate records...";
+        const delBatch = db.batch();
+        pData.existingDocs.forEach(doc => delBatch.delete(doc.ref));
+        await delBatch.commit();
       }
 
-      statusDiv.innerText = "Uploading new payslip records...";
-
-      // Parse Sheet Rows starting from row 6
-      const sheet = data.sheet;
+      statusDiv.innerText = "Saving payslip records...";
+      const sheet = pData.sheet;
       const range = XLSX.utils.decode_range(sheet['!ref']);
       let writeBatch = db.batch();
-      let count = 0;
+      let recordCount = 0;
 
-      for (let R = 5; R <= range.e.r; ++R) { // Row 6 is index 5
+      for (let R = 5; R <= range.e.r; ++R) {
         const getVal = (col) => {
           const cell = sheet[XLSX.utils.encode_cell({ r: R, c: col })];
           return cell ? String(cell.v).trim() : "";
@@ -220,54 +519,163 @@
 
         const empId = getVal(5); // Column F
         const empName = getVal(6); // Column G
+        if (!empId) continue;
 
-        if (!empId) continue; // Skip empty rows
-
-        const docRef = db.collection("payslips").doc(`${empId}_${data.clientName}_${data.payrollDate}`.replace(/[^a-zA-Z0-9_-]/g, ""));
+        const docRef = db.collection("payslips").doc(`${empId}_${pData.clientName}_${pData.payrollDate}`.replace(/[^a-zA-Z0-9_-]/g, ""));
 
         const record = {
-          company: data.company,
-          client: data.clientName,
-          payrollDate: data.payrollDate,
-          payrollPeriod: data.payrollPeriod,
+          company: pData.company,
+          client: pData.clientName,
+          payrollDate: pData.payrollDate,
+          payrollPeriod: pData.payrollPeriod,
           empId: empId,
           empName: empName,
-          regDaysCount: getVal(42), regDaysAmt: getVal(43),    // AQ, AR
-          regOtCount: getVal(47), regOtAmt: getVal(48),        // AV, AW
-          npCount: getVal(51), npAmt: getVal(52),              // AZ, BA
-          regOtNpCount: getVal(53), regOtNpAmt: getVal(54),    // BB, BC
-          restDayCount: getVal(73), restDayAmt: getVal(74),    // BV, BW
-          restDayOtCount: getVal(75), restDayOtAmt: getVal(76),// BX, BY
-          restDayNpCount: getVal(77), restDayNpAmt: getVal(78),// BZ, CA
-          restDayNpOtCount: getVal(79), restDayNpOtAmt: getVal(80),// CB, CC
-          leavePayCount: getVal(97), leavePayAmt: getVal(98),  // CT, CU
-          grossPay: getVal(101),                               // CX
-          welfare: getVal(104),                                // DA
-          healthInsurance: getVal(105),                        // DB
-          insuranceCard: getVal(106),                          // DC
-          misc: getVal(107),                                   // DD
-          medical: getVal(108),                                // DE
-          salaryLoan1: getVal(109),                            // DF
-          salaryLoan2: getVal(110),                            // DG
-          sssLoan: getVal(111),                                // DH
-          sssCalamityLoan: getVal(112),                        // DI
-          hdmfLoan: getVal(113),                               // DJ
-          hdmfCalamityLoan: getVal(114),                       // DK
-          totalDeduction: getVal(118),                         // DO
-          payrollAdj1: getVal(119),                            // DP
-          payrollAdj2: getVal(120),                            // DQ
-          salaryLoan3: getVal(121),                            // DR
-          refundSalary: getVal(123),                           // DT
-          netPay: getVal(125)                                  // DV
+          regDaysCount: getVal(42), regDaysAmt: getVal(43),
+          regOtCount: getVal(47), regOtAmt: getVal(48),
+          npCount: getVal(51), npAmt: getVal(52),
+          regOtNpCount: getVal(53), regOtNpAmt: getVal(54),
+          restDayCount: getVal(73), restDayAmt: getVal(74),
+          restDayOtCount: getVal(75), restDayOtAmt: getVal(76),
+          restDayNpCount: getVal(77), restDayNpAmt: getVal(78),
+          restDayNpOtCount: getVal(79), restDayNpOtAmt: getVal(80),
+          leavePayCount: getVal(97), leavePayAmt: getVal(98),
+          grossPay: getVal(101),
+          welfare: getVal(104), healthInsurance: getVal(105), insuranceCard: getVal(106),
+          misc: getVal(107), medical: getVal(108), salaryLoan1: getVal(109),
+          salaryLoan2: getVal(110), sssLoan: getVal(111), sssCalamityLoan: getVal(112),
+          hdmfLoan: getVal(113), hdmfCalamityLoan: getVal(114), totalDeduction: getVal(118),
+          payrollAdj1: getVal(119), payrollAdj2: getVal(120), salaryLoan3: getVal(121),
+          refundSalary: getVal(123), netPay: getVal(125)
         };
 
         writeBatch.set(docRef, record);
-        count++;
+        recordCount++;
       }
 
       await writeBatch.commit();
-      statusDiv.innerHTML = `<span style='color:green;'>SUCCESS: Upload completed! ${count} records saved/replaced.</span>`;
+
+      // Write Log Entry into "upload_history"
+      await db.collection("upload_history").add({
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        adminId: actingAdminId,
+        fileName: pData.file.name,
+        client: pData.clientName,
+        payrollDate: pData.payrollDate,
+        actionType: isOverride ? "OVERRIDE" : "UPLOADED"
+      });
+
+      statusDiv.innerHTML = `<span style='color:green;'>SUCCESS: ${recordCount} records saved (${isOverride ? 'OVERRIDDEN' : 'UPLOADED'}).</span>`;
       pendingUploadData = null;
+    }
+
+    // --- 4. PAYSLIP DATA GROUPED BY CLIENT TABS ---
+    async function loadPayslipDataTabs() {
+      const tabsContainer = document.getElementById("clientTabsContainer");
+      const tableContainer = document.getElementById("clientTableContainer");
+
+      tabsContainer.innerHTML = "Loading Client Tabs...";
+      tableContainer.innerHTML = "";
+
+      const snapshot = await db.collection("payslips").get();
+      if (snapshot.empty) {
+        tabsContainer.innerHTML = "No uploaded payslip data found.";
+        return;
+      }
+
+      // Group records by Client
+      const clientGroups = {};
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const clientKey = data.client || "UNKNOWN";
+        if (!clientGroups[clientKey]) clientGroups[clientKey] = [];
+        clientGroups[clientKey].push(data);
+      });
+
+      tabsContainer.innerHTML = "";
+      const clients = Object.keys(clientGroups);
+
+      clients.forEach((client, idx) => {
+        const tab = document.createElement("div");
+        tab.className = `tab-item ${idx === 0 ? 'active' : ''}`;
+        tab.innerText = client;
+        tab.onclick = () => {
+          document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
+          tab.classList.add("active");
+          renderClientTable(clientGroups[client]);
+        };
+        tabsContainer.appendChild(tab);
+      });
+
+      // Render the first tab by default
+      if (clients.length > 0) {
+        renderClientTable(clientGroups[clients[0]]);
+      }
+    }
+
+    function renderClientTable(records) {
+      const container = document.getElementById("clientTableContainer");
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>EMP ID</th>
+              <th>EMP NAME</th>
+              <th>PAYROLL DATE</th>
+              <th>CUT-OFF PERIOD</th>
+              <th>GROSS PAY</th>
+              <th>NET PAY</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      records.forEach(r => {
+        html += `
+          <tr>
+            <td><b>${r.empId}</b></td>
+            <td>${r.empName}</td>
+            <td>${r.payrollDate}</td>
+            <td>${r.payrollPeriod}</td>
+            <td>${r.grossPay}</td>
+            <td><b>${r.netPay}</b></td>
+          </tr>
+        `;
+      });
+
+      html += "</tbody></table>";
+      container.innerHTML = html;
+    }
+
+    // --- 5. HISTORY LOGS ---
+    async function loadHistoryList() {
+      const tbody = document.getElementById("historyTableBody");
+      tbody.innerHTML = "<tr><td colspan='6'>Loading logs...</td></tr>";
+
+      const snapshot = await db.collection("upload_history").orderBy("timestamp", "desc").get();
+      tbody.innerHTML = "";
+
+      if (snapshot.empty) {
+        tbody.innerHTML = "<tr><td colspan='6'>No history records found.</td></tr>";
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const log = doc.data();
+        const timeStr = log.timestamp ? log.timestamp.toDate().toLocaleString() : "N/A";
+        const tr = document.createElement("tr");
+
+        const tagColor = log.actionType === "OVERRIDE" ? "#e53e3e" : "#38a169";
+
+        tr.innerHTML = `
+          <td>${timeStr}</td>
+          <td><b>${log.adminId}</b></td>
+          <td>${log.fileName}</td>
+          <td>${log.client}</td>
+          <td>${log.payrollDate}</td>
+          <td><span style="background:${tagColor}; color:white; padding:3px 7px; border-radius:4px; font-weight:bold; font-size:11px;">${log.actionType}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
   </script>
 </body>
