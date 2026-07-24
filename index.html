@@ -1,9 +1,117 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
-  authDomain: "payslip-portal-328ef.firebaseapp.com",
-  projectId: "payslip-portal-328ef",
-  storageBucket: "payslip-portal-328ef.firebasestorage.app",
-  messagingSenderId: "552626296645",
-  appId: "1:552626296645:web:4810a048e188512927d02c",
-  measurementId: "G-D8SZDV2CTP"
-};
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Payslip Portal</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .card { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { text-align: center; color: #1a202c; margin-top: 0; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; color: #4a5568; }
+    input { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 16px; }
+    button { width: 100%; padding: 12px; background: #2b6cb0; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button:hover { background: #2c5282; }
+    .error { color: #c53030; background: #fff5f5; padding: 10px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; }
+    .payslip { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-top: 15px; }
+    .payslip h3 { margin-top: 0; color: #2b6cb0; border-bottom: 2px solid #cbd5e0; padding-bottom: 8px; }
+    .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
+    .row-key { color: #718096; }
+    .row-val { font-weight: bold; color: #2d3748; }
+  </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <div class="card">
+    <h2>View Your Payslip</h2>
+    <div class="form-group">
+      <label>Employee ID</label>
+      <input type="text" id="empId" placeholder="e.g. EMP-1001" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>PIN / Password</label>
+      <input type="password" id="empPin" placeholder="Enter PIN">
+    </div>
+    <button onclick="checkPayslip()">View Payslip</button>
+
+    <div id="errorMsg" class="error"></div>
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
+      authDomain: "payslip-portal-328ef.firebaseapp.com",
+      projectId: "payslip-portal-328ef",
+      storageBucket: "payslip-portal-328ef.firebasestorage.app",
+      messagingSenderId: "552626296645",
+      appId: "1:552626296645:web:4810a048e188512927d02c",
+      measurementId: "G-D8SZDV2CTP"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function checkPayslip() {
+      const id = document.getElementById("empId").value.trim().toUpperCase();
+      const pin = document.getElementById("empPin").value.trim();
+      const errorMsg = document.getElementById("errorMsg");
+      const results = document.getElementById("results");
+
+      errorMsg.style.display = "none";
+      results.innerHTML = "<p style='text-align:center;'>Fetching record...</p>";
+
+      if (!id || !pin) {
+        errorMsg.innerText = "Please fill in both Employee ID and PIN.";
+        errorMsg.style.display = "block";
+        results.innerHTML = "";
+        return;
+      }
+
+      try {
+        const empDoc = await db.collection("employees").doc(id).get();
+        
+        if (!empDoc.exists || String(empDoc.data().pin) !== pin) {
+          errorMsg.innerText = "Invalid Employee ID or PIN.";
+          errorMsg.style.display = "block";
+          results.innerHTML = "";
+          return;
+        }
+
+        const snapshot = await db.collection("payslips")
+                                  .where("empId", "==", id)
+                                  .get();
+
+        if (snapshot.empty) {
+          results.innerHTML = "<p style='text-align:center;'>No payslips found for this account.</p>";
+          return;
+        }
+
+        results.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          let card = `<div class="payslip"><h3>${data['Cutoff Period'] || 'Payslip'}</h3>`;
+          
+          for (let key in data) {
+            if (key !== 'empId' && key !== 'PIN') {
+              card += `<div class="row"><span class="row-key">${key}</span><span class="row-val">${data[key]}</span></div>`;
+            }
+          }
+          card += `</div>`;
+          results.innerHTML += card;
+        });
+
+      } catch (err) {
+        errorMsg.innerText = "Error connecting to server. Try again later.";
+        errorMsg.style.display = "block";
+        results.innerHTML = "";
+      }
+    }
+  </script>
+</body>
+</html>
