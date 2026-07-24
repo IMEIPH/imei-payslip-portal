@@ -5,20 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Employee Payslip Portal</title>
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f7fafc; margin: 0; padding: 40px 20px; display: flex; justify-content: center; }
-    .portal-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-    h2 { text-align: center; margin-top: 0; color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; }
-    .input-group { margin-bottom: 18px; }
-    label { font-weight: bold; display: block; margin-bottom: 6px; color: #4a5568; font-size: 13px; }
-    input[type="text"], input[type="password"], select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
-    .date-row { display: flex; gap: 8px; }
-    .date-row select, .date-row input { flex: 1; }
-    button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    button:hover { background: #2b6cb0; }
-    .error-msg { color: #e53e3e; font-size: 13px; font-weight: bold; text-align: center; margin-top: 15px; display: none; }
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: #f7fafc;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .portal-card {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 450px;
+    }
+    h2 {
+      text-align: center;
+      margin-top: 0;
+      color: #2d3748;
+      border-bottom: 2px solid #edf2f7;
+      padding-bottom: 12px;
+      font-size: 20px;
+      letter-spacing: 0.5px;
+    }
+    .input-group {
+      margin-bottom: 18px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+      color: #4a5568;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    input[type="text"], input[type="password"], select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, input[type="password"]:focus, select:focus {
+      border-color: #3182ce;
+    }
+    .date-row {
+      display: flex;
+      gap: 8px;
+    }
+    .date-row select {
+      flex: 2;
+    }
+    .date-row input {
+      flex: 1;
+      text-align: center;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #3182ce;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #2b6cb0;
+    }
+    .error-msg {
+      color: #e53e3e;
+      font-size: 13px;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 15px;
+      display: none;
+      line-height: 1.4;
+      white-space: pre-line;
+    }
   </style>
 
+  <!-- Firebase Compatibility Libraries -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
@@ -29,12 +108,12 @@
     
     <div class="input-group">
       <label>EMPLOYEE ID NUMBER</label>
-      <input type="text" id="empId" placeholder="Enter Employee ID">
+      <input type="text" id="empId" placeholder="e.g. 831016">
     </div>
 
     <div class="input-group">
       <label>PIN / PASSWORD</label>
-      <input type="password" id="empPin" placeholder="Enter 6-Digit PIN">
+      <input type="password" id="empPin" placeholder="••••••">
     </div>
 
     <div class="input-group">
@@ -47,15 +126,15 @@
           <option value="APRIL">APRIL</option>
           <option value="MAY">MAY</option>
           <option value="JUNE">JUNE</option>
-          <option value="JULY">JULY</option>
+          <option value="JULY" selected>JULY</option>
           <option value="AUGUST">AUGUST</option>
           <option value="SEPTEMBER">SEPTEMBER</option>
           <option value="OCTOBER">OCTOBER</option>
           <option value="NOVEMBER">NOVEMBER</option>
           <option value="DECEMBER">DECEMBER</option>
         </select>
-        <input type="text" id="payDay" placeholder="15">
-        <input type="text" id="payYear" placeholder="2026">
+        <input type="text" id="payDay" value="15" placeholder="15">
+        <input type="text" id="payYear" value="2026" placeholder="2026">
       </div>
     </div>
 
@@ -64,6 +143,7 @@
   </div>
 
   <script>
+    // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
       authDomain: "payslip-portal-328ef.firebaseapp.com",
@@ -74,11 +154,12 @@
       measurementId: "G-D8SZDV2CTP"
     };
 
+    // Initialize Firebase & Firestore
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     async function handleEmployeeLogin() {
-      // Clean inputs (trim leading/trailing white spaces)
+      // 1. Clean and normalize input values
       const empId = document.getElementById("empId").value.trim().toUpperCase();
       const pin = document.getElementById("empPin").value.trim();
       const month = document.getElementById("payMonth").value.trim().toUpperCase();
@@ -87,6 +168,7 @@
 
       const errDiv = document.getElementById("loginError");
       errDiv.style.display = "none";
+      errDiv.innerText = "";
 
       if (!empId || !pin || !day || !year) {
         errDiv.innerText = "PLEASE FILL IN ALL FIELDS.";
@@ -95,36 +177,62 @@
       }
 
       try {
-        // 1. Validate Admin/User PIN
+        // 2. Verify User Credentials in admin_users collection
         const userDoc = await db.collection("admin_users").doc(empId).get();
+        
         if (!userDoc.exists || userDoc.data().pin.trim() !== pin) {
           errDiv.innerText = "INVALID EMPLOYEE ID OR PIN.";
           errDiv.style.display = "block";
           return;
         }
 
-        // 2. Format payroll date string
-        const formattedDate = `${month} ${day}, ${year}`.trim();
-
-        // 3. Search payslip records
-        const payslipQuery = await db.collection("payslips")
+        // 3. Search payslips for matching Employee ID
+        const snapshot = await db.collection("payslips")
           .where("empId", "==", empId)
-          .where("payrollDate", "==", formattedDate)
           .get();
 
-        if (payslipQuery.empty) {
-          errDiv.innerText = `NO PAYSLIP FOUND FOR ${formattedDate}.`;
+        if (snapshot.empty) {
+          errDiv.innerText = `NO PAYSLIP RECORDS FOUND FOR ID: ${empId}.\nPLEASE CONTACT ADMIN TO UPLOAD PAYROLL.`;
           errDiv.style.display = "block";
           return;
         }
 
-        const data = payslipQuery.docs[0].data();
-        alert(`Welcome ${data.empName}! Net Pay: ${data.netPay}`);
+        // Prepare normalized search string (e.g. "JULY 15 2026")
+        const searchDateNormalized = `${month} ${day} ${year}`.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
+
+        let matchedData = null;
+        let availableDates = [];
+
+        // 4. Perform flexible date matching
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const storedDate = (data.payrollDate || "").toString();
+          availableDates.push(storedDate);
+
+          const storedDateNormalized = storedDate.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
+
+          if (storedDateNormalized.includes(searchDateNormalized) || searchDateNormalized.includes(storedDateNormalized)) {
+            matchedData = data;
+          }
+        });
+
+        if (matchedData) {
+          renderPayslip(matchedData);
+        } else {
+          errDiv.innerText = `NO PAYSLIP FOUND FOR ${month} ${day}, ${year}.\n(Available in database: ${availableDates.join(" | ")})`;
+          errDiv.style.display = "block";
+        }
 
       } catch (err) {
-        errDiv.innerText = "AN ERROR OCCURRED. PLEASE TRY AGAIN.";
+        console.error("Login Error:", err);
+        errDiv.innerText = "AN ERROR OCCURRED WHILE CONNECTING TO DATABASE.";
         errDiv.style.display = "block";
       }
+    }
+
+    function renderPayslip(data) {
+      alert(`PAYSILP FOUND!\n\nName: ${data.empName}\nNet Pay: ${data.netPay || 'N/A'}`);
+      // Extend this function to display your custom payslip UI layout as needed
     }
   </script>
 </body>
