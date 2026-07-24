@@ -3,35 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard & Payroll Upload</title>
+  <title>Admin Payslip Upload Portal</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f7fafc; margin: 0; padding: 30px; }
-    .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h2 { border-bottom: 2px solid #edf2f7; padding-bottom: 10px; color: #2d3748; }
-    .upload-box { border: 2px dashed #cbd5e0; padding: 20px; text-align: center; border-radius: 6px; margin-top: 20px; background: #f8fafc; }
-    input[type="file"] { margin: 15px 0; }
-    button { background: #3182ce; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    body { background-color: #f7fafc; padding: 30px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #1a202c; text-align: center; }
+    .upload-box { border: 2px dashed #cbd5e0; padding: 30px; text-align: center; border-radius: 8px; margin-top: 20px; background: #faf5ff; }
+    input[type="file"] { margin-bottom: 15px; }
+    button { padding: 12px 20px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
     button:hover { background: #2b6cb0; }
-    .status-msg { margin-top: 15px; font-weight: bold; font-size: 14px; }
+    #uploadStatus { margin-top: 15px; font-weight: bold; font-size: 14px; text-align: center; }
+
+    /* MODAL POPUP STYLES */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .modal-content h3 { margin-top: 0; color: #e53e3e; font-size: 18px; }
+    .modal-content p { color: #4a5568; font-size: 14px; line-height: 1.4; }
+    .modal-input { width: 100%; padding: 10px; margin-top: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-cancel { background: #a0aec0; }
+    .btn-cancel:hover { background: #718096; }
+    .btn-override { background: #e53e3e; }
+    .btn-override:hover { background: #c53030; }
+    .modal-error { color: #e53e3e; font-size: 13px; font-weight: bold; margin-top: 10px; display: none; }
   </style>
 
+  <!-- SheetJS to parse Excel files -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
   <div class="container">
-    <h2>PAYROLL UPLOAD PORTAL</h2>
-    <p>Upload client payroll Excel files. Data will be isolated by Client Name (Cell A2) and Payroll Date (Cell A3).</p>
-
+    <h2>ADMIN PAYSLIP UPLOADER</h2>
     <div class="upload-box">
       <input type="file" id="excelFile" accept=".xlsx, .xls">
       <br>
-      <button onclick="handlePayrollUpload()">UPLOAD PAYROLL FILE</button>
+      <button onclick="startUpload()">UPLOAD PAYSLIP SHEET</button>
     </div>
-    <div id="uploadStatus" class="status-msg"></div>
+    <div id="uploadStatus"></div>
+  </div>
+
+  <!-- OVERRIDE CONFIRMATION MODAL -->
+  <div id="overrideModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>DUPLICATE PAYSLIP DETECTED</h3>
+      <p id="modalDetailText">A payslip batch with matching Client, Payroll Date, and Cut-off Date already exists.</p>
+      <p><strong>Would you like to override/replace the previous file?</strong></p>
+      
+      <input type="text" id="adminId" class="modal-input" placeholder="ENTER ADMIN ID">
+      <input type="password" id="adminPassword" class="modal-input" placeholder="ENTER ADMIN PASSWORD">
+      <div id="modalError" class="modal-error"></div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">CANCEL</button>
+        <button class="btn-override" onclick="confirmOverride()">OVERRIDE & REPLACE</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -48,90 +79,195 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    async function handlePayrollUpload() {
+    let pendingUploadData = null; // Store workbook context temporarily during prompt
+
+    function startUpload() {
       const fileInput = document.getElementById("excelFile");
       const statusDiv = document.getElementById("uploadStatus");
 
       if (!fileInput.files.length) {
-        alert("PLEASE SELECT AN EXCEL FILE.");
+        statusDiv.innerHTML = "<span style='color:red;'>Please select an Excel file first.</span>";
         return;
       }
 
       const file = fileInput.files[0];
       const reader = new FileReader();
 
-      statusDiv.style.color = "#3182ce";
-      statusDiv.innerText = "Processing file, please wait...";
+      statusDiv.innerText = "Reading file...";
 
       reader.onload = async function (e) {
         try {
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
 
-          const cellA2 = worksheet['A2'] ? worksheet['A2'].v : "DEFAULT_CLIENT";
-          const cellA3 = worksheet['A3'] ? worksheet['A3'].v : null;
+          // Extract header info
+          const company = (sheet["A1"] ? sheet["A1"].v : "").toString().trim().toUpperCase();
+          const clientName = (sheet["A2"] ? sheet["A2"].v : "").toString().trim().toUpperCase();
+          const payrollDate = (sheet["A3"] ? sheet["A3"].v : "").toString().trim().toUpperCase();
+          const payrollPeriod = (sheet["A4"] ? sheet["A4"].v : "").toString().trim().toUpperCase();
 
-          if (!cellA3) {
-            statusDiv.style.color = "#e53e3e";
-            statusDiv.innerText = "UPLOAD ERROR: Cell A3 is empty! It must contain the Payroll Date.";
+          if (!clientName || !payrollDate || !payrollPeriod) {
+            statusDiv.innerHTML = "<span style='color:red;'>ERROR: Missing header info in A2, A3, or A4.</span>";
             return;
           }
 
-          const clientName = String(cellA2).trim().toUpperCase();
-          const payrollDate = String(cellA3).trim().toUpperCase();
+          statusDiv.innerText = "Checking for duplicate records...";
 
-          const range = XLSX.utils.decode_range(worksheet['!ref']);
-          const batch = db.batch();
-          let recordCount = 0;
+          // Query Firestore for duplicates matching A2, A3, and A4
+          const dupQuery = await db.collection("payslips")
+            .where("client", "==", clientName)
+            .where("payrollDate", "==", payrollDate)
+            .where("payrollPeriod", "==", payrollPeriod)
+            .get();
 
-          const getCellValue = (r, c) => {
-            const cell = worksheet[XLSX.utils.encode_cell({ r: r, c: c })];
-            return cell ? String(cell.v).replace(/\s+/g, ' ').trim() : "";
+          // Save parsed context for later if user decides to override
+          pendingUploadData = {
+            sheet: sheet,
+            company: company,
+            clientName: clientName,
+            payrollDate: payrollDate,
+            payrollPeriod: payrollPeriod,
+            existingDocs: dupQuery.docs
           };
 
-          for (let R = 5; R <= range.e.r; ++R) {
-            const empId = getCellValue(R, 5).toUpperCase();   // Col F
-            const empName = getCellValue(R, 6).toUpperCase(); // Col G
-
-            if (!empId) continue;
-
-            const cleanKey = `${empId}_${clientName}_${payrollDate}`.replace(/[^A-Z0-9]/g, '');
-            const payslipRef = db.collection("payslips").doc(cleanKey);
-
-            const payslipRecord = {
-              empId: empId,
-              empName: empName,
-              clientName: clientName,
-              payrollDate: payrollDate,
-              basicPay: getCellValue(R, 7),
-              netPay: getCellValue(R, 8),
-              uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            batch.set(payslipRef, payslipRecord, { merge: true });
-            recordCount++;
+          if (!dupQuery.empty) {
+            // DUPLICATE FOUND: Show modal
+            statusDiv.innerHTML = "<span style='color:orange;'>Duplicate found. Waiting for override confirmation...</span>";
+            document.getElementById("modalDetailText").innerHTML = 
+              `<strong>Duplicate Batch Found:</strong><br>` +
+              `• Client: <b>${clientName}</b><br>` +
+              `• Payroll Date: <b>${payrollDate}</b><br>` +
+              `• Cut-off Period: <b>${payrollPeriod}</b>`;
+            openModal();
+          } else {
+            // NO DUPLICATE: Directly upload
+            await processBatchUpload(false);
           }
-
-          if (recordCount === 0) {
-            statusDiv.style.color = "#e53e3e";
-            statusDiv.innerText = "NO VALID EMPLOYEE RECORDS FOUND IN FILE.";
-            return;
-          }
-
-          await batch.commit();
-          statusDiv.style.color = "#38a169";
-          statusDiv.innerText = `SUCCESS! Uploaded ${recordCount} payslips for ${clientName} (${payrollDate}).`;
-          fileInput.value = "";
 
         } catch (err) {
           console.error(err);
-          statusDiv.style.color = "#e53e3e";
-          statusDiv.innerText = "AN ERROR OCCURRED WHILE PROCESSING FILE.";
+          statusDiv.innerHTML = `<span style='color:red;'>ERROR: ${err.message}</span>`;
         }
       };
 
       reader.readAsArrayBuffer(file);
+    }
+
+    function openModal() {
+      document.getElementById("adminId").value = "";
+      document.getElementById("adminPassword").value = "";
+      document.getElementById("modalError").style.display = "none";
+      document.getElementById("overrideModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("overrideModal").style.display = "none";
+      document.getElementById("uploadStatus").innerHTML = "<span style='color:red;'>Upload cancelled by user.</span>";
+      pendingUploadData = null;
+    }
+
+    async function confirmOverride() {
+      const adminId = document.getElementById("adminId").value.trim();
+      const adminPassword = document.getElementById("adminPassword").value.trim();
+      const modalError = document.getElementById("modalError");
+
+      if (!adminId || !adminPassword) {
+        modalError.innerText = "PLEASE ENTER BOTH ADMIN ID AND PASSWORD.";
+        modalError.style.display = "block";
+        return;
+      }
+
+      // Verify Admin credentials from Firestore ("admin_users" collection)
+      const adminDoc = await db.collection("admin_users").doc(adminId).get();
+      if (!adminDoc.exists || adminDoc.data().password !== adminPassword) {
+        modalError.innerText = "INVALID ADMIN ID OR PASSWORD.";
+        modalError.style.display = "block";
+        return;
+      }
+
+      // Credentials verified, close modal and process override
+      document.getElementById("overrideModal").style.display = "none";
+      await processBatchUpload(true);
+    }
+
+    async function processBatchUpload(isOverride) {
+      const statusDiv = document.getElementById("uploadStatus");
+      const data = pendingUploadData;
+
+      if (isOverride && data.existingDocs && data.existingDocs.length > 0) {
+        statusDiv.innerText = "Deleting old duplicate records...";
+        // Delete all old records in batches
+        const deleteBatch = db.batch();
+        data.existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
+        await deleteBatch.commit();
+      }
+
+      statusDiv.innerText = "Uploading new payslip records...";
+
+      // Parse Sheet Rows starting from row 6
+      const sheet = data.sheet;
+      const range = XLSX.utils.decode_range(sheet['!ref']);
+      let writeBatch = db.batch();
+      let count = 0;
+
+      for (let R = 5; R <= range.e.r; ++R) { // Row 6 is index 5
+        const getVal = (col) => {
+          const cell = sheet[XLSX.utils.encode_cell({ r: R, c: col })];
+          return cell ? String(cell.v).trim() : "";
+        };
+
+        const empId = getVal(5); // Column F
+        const empName = getVal(6); // Column G
+
+        if (!empId) continue; // Skip empty rows
+
+        const docRef = db.collection("payslips").doc(`${empId}_${data.clientName}_${data.payrollDate}`.replace(/[^a-zA-Z0-9_-]/g, ""));
+
+        const record = {
+          company: data.company,
+          client: data.clientName,
+          payrollDate: data.payrollDate,
+          payrollPeriod: data.payrollPeriod,
+          empId: empId,
+          empName: empName,
+          regDaysCount: getVal(42), regDaysAmt: getVal(43),    // AQ, AR
+          regOtCount: getVal(47), regOtAmt: getVal(48),        // AV, AW
+          npCount: getVal(51), npAmt: getVal(52),              // AZ, BA
+          regOtNpCount: getVal(53), regOtNpAmt: getVal(54),    // BB, BC
+          restDayCount: getVal(73), restDayAmt: getVal(74),    // BV, BW
+          restDayOtCount: getVal(75), restDayOtAmt: getVal(76),// BX, BY
+          restDayNpCount: getVal(77), restDayNpAmt: getVal(78),// BZ, CA
+          restDayNpOtCount: getVal(79), restDayNpOtAmt: getVal(80),// CB, CC
+          leavePayCount: getVal(97), leavePayAmt: getVal(98),  // CT, CU
+          grossPay: getVal(101),                               // CX
+          welfare: getVal(104),                                // DA
+          healthInsurance: getVal(105),                        // DB
+          insuranceCard: getVal(106),                          // DC
+          misc: getVal(107),                                   // DD
+          medical: getVal(108),                                // DE
+          salaryLoan1: getVal(109),                            // DF
+          salaryLoan2: getVal(110),                            // DG
+          sssLoan: getVal(111),                                // DH
+          sssCalamityLoan: getVal(112),                        // DI
+          hdmfLoan: getVal(113),                               // DJ
+          hdmfCalamityLoan: getVal(114),                       // DK
+          totalDeduction: getVal(118),                         // DO
+          payrollAdj1: getVal(119),                            // DP
+          payrollAdj2: getVal(120),                            // DQ
+          salaryLoan3: getVal(121),                            // DR
+          refundSalary: getVal(123),                           // DT
+          netPay: getVal(125)                                  // DV
+        };
+
+        writeBatch.set(docRef, record);
+        count++;
+      }
+
+      await writeBatch.commit();
+      statusDiv.innerHTML = `<span style='color:green;'>SUCCESS: Upload completed! ${count} records saved/replaced.</span>`;
+      pendingUploadData = null;
     }
   </script>
 </body>
