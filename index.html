@@ -18,6 +18,11 @@
     button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     button:hover { background: #2b6cb0; }
     .error-msg { color: #e53e3e; font-size: 13px; font-weight: bold; text-align: center; margin-top: 15px; display: none; line-height: 1.4; white-space: pre-line; }
+    
+    /* Payslip Display Styles */
+    .payslip-display { display: none; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+    .payslip-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; font-size: 14px; }
+    .payslip-total { display: flex; justify-content: space-between; padding: 12px; background: #ebf8ff; border-radius: 6px; font-weight: bold; font-size: 16px; margin-top: 15px; color: #2b6cb0; }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -25,7 +30,8 @@
 </head>
 <body>
 
-  <div class="portal-card">
+  <!-- LOGIN CARD -->
+  <div id="loginCard" class="portal-card">
     <h2>EMPLOYEE PAYSLIP PORTAL</h2>
     
     <div class="input-group">
@@ -64,6 +70,23 @@
     <div id="loginError" class="error-msg"></div>
   </div>
 
+  <!-- PAYSLIP VIEW CARD -->
+  <div id="payslipCard" class="payslip-display">
+    <h2 style="text-align: center; margin-top:0;">PAYSLIP DETAILS</h2>
+    <div class="payslip-row"><span>Employee Name:</span><strong id="displayName"></strong></div>
+    <div class="payslip-row"><span>Employee ID:</span><strong id="displayId"></strong></div>
+    <div class="payslip-row"><span>Payroll Date:</span><strong id="displayDate"></strong></div>
+    <div class="payslip-row"><span>Client / Company:</span><strong id="displayClient"></strong></div>
+    
+    <div class="payslip-total">
+      <span>NET PAY:</span>
+      <span id="displayNet"></span>
+    </div>
+
+    <button onclick="window.print()" style="margin-top:15px; background:#3182ce;">PRINT PAYSLIP</button>
+    <button onclick="location.reload()" style="margin-top:8px; background:#e2e8f0; color:#2d3748;">LOGOUT</button>
+  </div>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
@@ -95,7 +118,7 @@
       }
 
       try {
-        // 1. Verify User Credentials in admin_users collection
+        // 1. Verify User PIN in admin_users
         const userDoc = await db.collection("admin_users").doc(empId).get();
         if (!userDoc.exists || userDoc.data().pin.trim() !== pin) {
           errDiv.innerText = "INVALID EMPLOYEE ID OR PIN.";
@@ -103,7 +126,7 @@
           return;
         }
 
-        // 2. Query payslips for Employee ID across ALL Clients
+        // 2. Query payslips for Employee ID across all clients
         const snapshot = await db.collection("payslips")
           .where("empId", "==", empId)
           .get();
@@ -114,7 +137,7 @@
           return;
         }
 
-        // 3. Flexible Date Match across all uploaded client files
+        // 3. Match Date Flexible Logic
         const searchDate = `${month} ${day} ${year}`.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
 
         let matchedData = null;
@@ -147,7 +170,14 @@
     }
 
     function renderPayslip(data) {
-      alert(`PAYSLIP FOUND!\n\nName: ${data.empName}\nClient: ${data.clientName || 'N/A'}\nNet Pay: ${data.netPay || 'N/A'}`);
+      document.getElementById("loginCard").style.display = "none";
+      document.getElementById("payslipCard").style.display = "block";
+
+      document.getElementById("displayName").innerText = data.empName || "N/A";
+      document.getElementById("displayId").innerText = data.empId || "N/A";
+      document.getElementById("displayDate").innerText = data.payrollDate || "N/A";
+      document.getElementById("displayClient").innerText = data.clientName || "N/A";
+      document.getElementById("displayNet").innerText = "₱" + (data.netPay || "0.00");
     }
   </script>
 </body>
