@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HR Admin - Upload Payslips</title>
+  <title>HR Admin - Secured Upload</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -14,25 +14,25 @@
     input[type="file"] { width: 100%; padding: 10px; border: 1px dashed #cbd5e0; border-radius: 6px; background: #faf5ff; }
     button { width: 100%; padding: 12px; background: #38a169; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
     button:hover { background: #2f855a; }
-    .status { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; }
+    .status { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; line-height: 1.4; }
     .success { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
     .error { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
   </style>
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <!-- SheetJS for processing Excel -->
+  <!-- SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
   <div class="card">
-    <h2>HR Payroll Upload Portal</h2>
+    <h2>HR Payroll Secured Upload</h2>
     <div class="form-group">
       <label>Select Payroll Excel Sheet (.xlsx)</label>
       <input type="file" id="excelFile" accept=".xlsx, .xls">
     </div>
-    <button onclick="processAndUpload()">Upload to Database</button>
+    <button onclick="processAndUpload()">Validate & Upload to Database</button>
 
     <div id="statusBox" class="status"></div>
   </div>
@@ -58,6 +58,12 @@
       box.style.display = "block";
     }
 
+    function isDateValue(val) {
+      if (!val) return false;
+      const parsed = Date.parse(val);
+      return !isNaN(parsed) && String(val).length > 5 && (val.includes("/") || val.includes("-") || val.includes(","));
+    }
+
     async function processAndUpload() {
       const fileInput = document.getElementById("excelFile");
       if (!fileInput.files.length) {
@@ -65,7 +71,7 @@
         return;
       }
 
-      showStatus("Reading Excel file and updating database... Please wait.");
+      showStatus("Validating data integrity...");
 
       const file = fileInput.files[0];
       const reader = new FileReader();
@@ -76,40 +82,84 @@
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false });
 
           if (jsonData.length === 0) {
-            showStatus("The selected Excel sheet is empty.", true);
+            showStatus("Validation Error: The Excel sheet is empty.", true);
             return;
           }
+
+          // --- VALIDATION PHASE ---
+          for (let i = 0; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            const rowNum = i + 2; // Row index corresponding to Excel line
+
+            const empId = String(row["Employee ID"] || row["EMPLOYEE ID"] || row["Emp ID"] || "").trim();
+            const empName = String(row["Employee Name"] || row["EMPLOYEE NAME"] || row["Name"] || "").trim();
+            const pin = String(row["PIN"] || row["Pin"] || "").trim();
+
+            // 1. Mandatory Fields
+            if (!empId) {
+              showStatus(`❌ Error on Row ${rowNum}: 'Employee ID' is missing.`, true);
+              return;
+            }
+            if (!empName) {
+              showStatus(`❌ Error on Row ${rowNum}: 'Employee Name' is missing.`, true);
+              return;
+            }
+            if (!pin) {
+              showStatus(`❌ Error on Row ${rowNum}: 'PIN' is missing.`, true);
+              return;
+            }
+
+            // 2. Validate Employee ID Format (Starts with IS OR is purely numeric)
+            const isPrefixedID = /^IS[-]?\w+/i.test(empId);
+            const isNumericID = /^\d+$/.test(empId);
+
+            if (!isPrefixedID && !isNumericID) {
+              showStatus(`❌ Invalid ID on Row ${rowNum}: '${empId}' must either start with 'IS' or contain numbers only.`, true);
+              return;
+            }
+
+            // 3. Validate PIN Format (Strictly 6 Digits)
+            const is6DigitPin = /^\d{6}$/.test(pin);
+            if (!is6DigitPin) {
+              showStatus(`❌ Invalid PIN on Row ${rowNum}: PIN '${pin}' must be exactly a 6-digit number.`, true);
+              return;
+            }
+
+            // 4. Validate Name Column (No numbers or dates in Name field)
+            const nameHasDigits = /\d/.test(empName);
+            if (nameHasDigits || isDateValue(empName)) {
+              showStatus(`❌ Invalid Name on Row ${rowNum}: '${empName}' contains numbers or date formats.`, true);
+              return;
+            }
+          }
+
+          // --- UPLOAD PHASE ---
+          showStatus("Validation passed! Uploading records to database...");
 
           let count = 0;
           for (let row of jsonData) {
             const empId = String(row["Employee ID"] || row["EMPLOYEE ID"] || row["Emp ID"] || "").trim().toUpperCase();
             const pin = String(row["PIN"] || row["Pin"] || "").trim();
 
-            if (!empId) continue;
+            await db.collection("employees").doc(empId).set({
+              pin: pin,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
 
-            // 1. Update or create Employee credentials
-            if (pin) {
-              await db.collection("employees").doc(empId).set({
-                pin: pin,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
-            }
-
-            // 2. Add Payslip record
             row.empId = empId;
             await db.collection("payslips").add(row);
             count++;
           }
 
-          showStatus(`✅ Successfully uploaded ${count} payslips! Employees can now view them.`);
-          fileInput.value = ""; // Reset file input
+          showStatus(`✅ All checks passed! Successfully uploaded ${count} valid payslips.`);
+          fileInput.value = "";
 
         } catch (err) {
           console.error(err);
-          showStatus("Error uploading data. Check console or database rules.", true);
+          showStatus("System Error processing Excel file. Please double check column headers.", true);
         }
       };
 
