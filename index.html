@@ -5,99 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Employee Payslip Portal</title>
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    body {
-      background-color: #f7fafc;
-      margin: 0;
-      padding: 40px 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .portal-card {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 450px;
-    }
-    h2 {
-      text-align: center;
-      margin-top: 0;
-      color: #2d3748;
-      border-bottom: 2px solid #edf2f7;
-      padding-bottom: 12px;
-      font-size: 20px;
-      letter-spacing: 0.5px;
-    }
-    .input-group {
-      margin-bottom: 18px;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 6px;
-      color: #4a5568;
-      font-size: 12px;
-      letter-spacing: 0.5px;
-    }
-    input[type="text"], input[type="password"], select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #cbd5e0;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    input[type="text"]:focus, input[type="password"]:focus, select:focus {
-      border-color: #3182ce;
-    }
-    .date-row {
-      display: flex;
-      gap: 8px;
-    }
-    .date-row select {
-      flex: 2;
-    }
-    .date-row input {
-      flex: 1;
-      text-align: center;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #3182ce;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 10px;
-      transition: background 0.2s;
-    }
-    button:hover {
-      background: #2b6cb0;
-    }
-    .error-msg {
-      color: #e53e3e;
-      font-size: 13px;
-      font-weight: bold;
-      text-align: center;
-      margin-top: 15px;
-      display: none;
-      line-height: 1.4;
-      white-space: pre-line;
-    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f7fafc; margin: 0; padding: 40px 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .portal-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+    h2 { text-align: center; margin-top: 0; color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-size: 20px; }
+    .input-group { margin-bottom: 18px; }
+    label { font-weight: bold; display: block; margin-bottom: 6px; color: #4a5568; font-size: 12px; }
+    input[type="text"], input[type="password"], select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; outline: none; }
+    .date-row { display: flex; gap: 8px; }
+    .date-row select { flex: 2; }
+    .date-row input { flex: 1; text-align: center; }
+    button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #2b6cb0; }
+    .error-msg { color: #e53e3e; font-size: 13px; font-weight: bold; text-align: center; margin-top: 15px; display: none; line-height: 1.4; white-space: pre-line; }
   </style>
 
-  <!-- Firebase Compatibility Libraries -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
@@ -143,7 +65,6 @@
   </div>
 
   <script>
-    // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
       authDomain: "payslip-portal-328ef.firebaseapp.com",
@@ -154,12 +75,10 @@
       measurementId: "G-D8SZDV2CTP"
     };
 
-    // Initialize Firebase & Firestore
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     async function handleEmployeeLogin() {
-      // 1. Clean and normalize input values
       const empId = document.getElementById("empId").value.trim().toUpperCase();
       const pin = document.getElementById("empPin").value.trim();
       const month = document.getElementById("payMonth").value.trim().toUpperCase();
@@ -168,7 +87,6 @@
 
       const errDiv = document.getElementById("loginError");
       errDiv.style.display = "none";
-      errDiv.innerText = "";
 
       if (!empId || !pin || !day || !year) {
         errDiv.innerText = "PLEASE FILL IN ALL FIELDS.";
@@ -177,41 +95,39 @@
       }
 
       try {
-        // 2. Verify User Credentials in admin_users collection
+        // 1. Verify User Credentials in admin_users collection
         const userDoc = await db.collection("admin_users").doc(empId).get();
-        
         if (!userDoc.exists || userDoc.data().pin.trim() !== pin) {
           errDiv.innerText = "INVALID EMPLOYEE ID OR PIN.";
           errDiv.style.display = "block";
           return;
         }
 
-        // 3. Search payslips for matching Employee ID
+        // 2. Query payslips for Employee ID across ALL Clients
         const snapshot = await db.collection("payslips")
           .where("empId", "==", empId)
           .get();
 
         if (snapshot.empty) {
-          errDiv.innerText = `NO PAYSLIP RECORDS FOUND FOR ID: ${empId}.\nPLEASE CONTACT ADMIN TO UPLOAD PAYROLL.`;
+          errDiv.innerText = `NO PAYSLIP RECORDS FOUND FOR ID: ${empId}.`;
           errDiv.style.display = "block";
           return;
         }
 
-        // Prepare normalized search string (e.g. "JULY 15 2026")
-        const searchDateNormalized = `${month} ${day} ${year}`.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
+        // 3. Flexible Date Match across all uploaded client files
+        const searchDate = `${month} ${day} ${year}`.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
 
         let matchedData = null;
         let availableDates = [];
 
-        // 4. Perform flexible date matching
         snapshot.forEach(doc => {
           const data = doc.data();
           const storedDate = (data.payrollDate || "").toString();
           availableDates.push(storedDate);
 
-          const storedDateNormalized = storedDate.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
+          const storedNormalized = storedDate.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
 
-          if (storedDateNormalized.includes(searchDateNormalized) || searchDateNormalized.includes(storedDateNormalized)) {
+          if (storedNormalized.includes(searchDate) || searchDate.includes(storedNormalized)) {
             matchedData = data;
           }
         });
@@ -231,8 +147,7 @@
     }
 
     function renderPayslip(data) {
-      alert(`PAYSILP FOUND!\n\nName: ${data.empName}\nNet Pay: ${data.netPay || 'N/A'}`);
-      // Extend this function to display your custom payslip UI layout as needed
+      alert(`PAYSLIP FOUND!\n\nName: ${data.empName}\nClient: ${data.clientName || 'N/A'}\nNet Pay: ${data.netPay || 'N/A'}`);
     }
   </script>
 </body>
