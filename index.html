@@ -6,85 +6,190 @@
   <title>Employee Payslip Portal</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f7fafc; margin: 0; padding: 40px 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-    .portal-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-    h2 { text-align: center; margin-top: 0; color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-size: 20px; }
-    .input-group { margin-bottom: 18px; }
-    label { font-weight: bold; display: block; margin-bottom: 6px; color: #4a5568; font-size: 12px; }
-    input[type="text"], input[type="password"], select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; outline: none; }
-    .date-row { display: flex; gap: 8px; }
-    .date-row select { flex: 2; }
-    .date-row input { flex: 1; text-align: center; }
-    button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    button:hover { background: #2b6cb0; }
-    .error-msg { color: #e53e3e; font-size: 13px; font-weight: bold; text-align: center; margin-top: 15px; display: none; line-height: 1.4; white-space: pre-line; }
+    body { background-color: #f7fafc; padding: 20px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 650px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     
-    /* Payslip Display Styles */
-    .payslip-display { display: none; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-    .payslip-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; font-size: 14px; }
-    .payslip-total { display: flex; justify-content: space-between; padding: 12px; background: #ebf8ff; border-radius: 6px; font-weight: bold; font-size: 16px; margin-top: 15px; color: #2b6cb0; }
-  </style>
+    .login-section { border-bottom: 2px solid #edf2f7; padding-bottom: 20px; margin-bottom: 20px; }
+    .input-group { margin-bottom: 15px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 14px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; background: #fff; }
+    
+    /* DATE GRID LAYOUT */
+    .date-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+    
+    button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #2b6cb0; }
+    
+    /* PAYSLIP DISPLAY STYLES */
+    .payslip-box { display: none; margin-top: 25px; border: 1px solid #cbd5e0; border-radius: 8px; padding: 25px; background: #fff; }
+    
+    /* TOP TITLE: A1, A2, A3, A4 */
+    .payslip-title { text-align: center; border-bottom: 2px dashed #cbd5e0; padding-bottom: 15px; margin-bottom: 20px; }
+    .payslip-title h2 { margin: 0 0 5px 0; color: #1a202c; text-transform: uppercase; font-size: 20px; }
+    .payslip-title h3 { margin: 0 0 5px 0; color: #4a5568; text-transform: uppercase; font-size: 16px; }
+    .payslip-title p { margin: 3px 0; color: #2d3748; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+    
+    /* EMPLOYEE DETAILS */
+    .employee-info { border-bottom: 2px dashed #cbd5e0; padding-bottom: 15px; margin-bottom: 20px; }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; text-transform: uppercase; }
+    .info-row strong { color: #4a5568; }
 
+    /* TABLE LAYOUT & ALIGNMENT */
+    .section-header { background: #edf2f7; padding: 8px 10px; font-weight: bold; color: #2d3748; text-transform: uppercase; margin-top: 15px; border-radius: 4px; font-size: 14px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 15px; }
+    .table th { padding: 8px 10px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #718096; text-transform: uppercase; }
+    .table td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; font-size: 13px; text-transform: uppercase; }
+    .table tr:last-child td { border-bottom: none; }
+    
+    .text-left { text-align: left; }
+    .text-center { text-align: center; }
+    .amount { text-align: right; font-weight: bold; }
+    
+    .highlight-row { background: #ebf8ff; font-weight: bold; color: #2b6cb0; }
+    .net-pay-row { background: #c6f6d5; font-weight: bold; color: #22543d; font-size: 15px; }
+
+    .error-msg { color: #e53e3e; font-weight: bold; text-align: center; margin-top: 10px; display: none; font-size: 14px; }
+  </style>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <!-- LOGIN CARD -->
-  <div id="loginCard" class="portal-card">
-    <h2>EMPLOYEE PAYSLIP PORTAL</h2>
-    
-    <div class="input-group">
-      <label>EMPLOYEE ID NUMBER</label>
-      <input type="text" id="empId" placeholder="e.g. 831016">
-    </div>
-
-    <div class="input-group">
-      <label>PIN / PASSWORD</label>
-      <input type="password" id="empPin" placeholder="••••••">
-    </div>
-
-    <div class="input-group">
-      <label>PAYROLL DATE</label>
-      <div class="date-row">
-        <select id="payMonth">
-          <option value="JANUARY">JANUARY</option>
-          <option value="FEBRUARY">FEBRUARY</option>
-          <option value="MARCH">MARCH</option>
-          <option value="APRIL">APRIL</option>
-          <option value="MAY">MAY</option>
-          <option value="JUNE">JUNE</option>
-          <option value="JULY" selected>JULY</option>
-          <option value="AUGUST">AUGUST</option>
-          <option value="SEPTEMBER">SEPTEMBER</option>
-          <option value="OCTOBER">OCTOBER</option>
-          <option value="NOVEMBER">NOVEMBER</option>
-          <option value="DECEMBER">DECEMBER</option>
-        </select>
-        <input type="text" id="payDay" value="15" placeholder="15">
-        <input type="text" id="payYear" value="2026" placeholder="2026">
+  <div class="container">
+    <div class="login-section">
+      <h2 style="text-align: center; margin-top: 0;">EMPLOYEE PAYSLIP PORTAL</h2>
+      
+      <div class="input-group">
+        <label>EMPLOYEE ID NUMBER</label>
+        <input type="text" id="empId" placeholder="ENTER ID NUMBER">
       </div>
+      
+      <div class="input-group">
+        <label>PIN / PASSWORD</label>
+        <input type="password" id="pin" placeholder="ENTER 6-DIGIT PIN">
+      </div>
+
+      <div class="input-group">
+        <label>PAYROLL DATE</label>
+        <div class="date-grid">
+          <select id="pMonth">
+            <option value="">SELECT MONTH</option>
+            <option value="JANUARY">JANUARY</option>
+            <option value="FEBRUARY">FEBRUARY</option>
+            <option value="MARCH">MARCH</option>
+            <option value="APRIL">APRIL</option>
+            <option value="MAY">MAY</option>
+            <option value="JUNE">JUNE</option>
+            <option value="JULY">JULY</option>
+            <option value="AUGUST">AUGUST</option>
+            <option value="SEPTEMBER">SEPTEMBER</option>
+            <option value="OCTOBER">OCTOBER</option>
+            <option value="NOVEMBER">NOVEMBER</option>
+            <option value="DECEMBER">DECEMBER</option>
+          </select>
+          <input type="number" id="pDay" placeholder="DAY (e.g. 15)" min="1" max="31">
+          <input type="number" id="pYear" placeholder="YEAR (e.g. 2026)">
+        </div>
+      </div>
+
+      <button onclick="viewPayslip()">VIEW PAYSLIP</button>
+      <div id="errorMsg" class="error-msg"></div>
     </div>
 
-    <button onclick="handleEmployeeLogin()">VIEW PAYSLIP</button>
-    <div id="loginError" class="error-msg"></div>
-  </div>
+    <!-- PAYSLIP DISPLAY CONTAINER -->
+    <div id="payslipBox" class="payslip-box">
+      
+      <!-- TOP TITLE: A1, A2, A3, A4 -->
+      <div class="payslip-title">
+        <h2 id="pA1">---</h2>
+        <h3 id="pA2">---</h3>
+        <p id="pA3">---</p>
+        <p id="pA4">---</p>
+      </div>
 
-  <!-- PAYSLIP VIEW CARD -->
-  <div id="payslipCard" class="payslip-display">
-    <h2 style="text-align: center; margin-top:0;">PAYSLIP DETAILS</h2>
-    <div class="payslip-row"><span>Employee Name:</span><strong id="displayName"></strong></div>
-    <div class="payslip-row"><span>Employee ID:</span><strong id="displayId"></strong></div>
-    <div class="payslip-row"><span>Payroll Date:</span><strong id="displayDate"></strong></div>
-    <div class="payslip-row"><span>Client / Company:</span><strong id="displayClient"></strong></div>
-    
-    <div class="payslip-total">
-      <span>NET PAY:</span>
-      <span id="displayNet"></span>
+      <!-- EMPLOYEE DETAILS -->
+      <div class="employee-info">
+        <div class="info-row">
+          <strong>EMPLOYEE ID NUMBER:</strong>
+          <span id="pF">---</span>
+        </div>
+        <div class="info-row">
+          <strong>EMPLOYEE NAME:</strong>
+          <span id="pG">---</span>
+        </div>
+      </div>
+
+      <!-- EARNINGS & HOURS SECTION -->
+      <div class="section-header">EARNINGS & HOURS</div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 50%;">TYPE</th>
+            <th class="text-center" style="width: 25%;">HOURS / DAYS</th>
+            <th class="amount" style="width: 25%;">AMOUNT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAR">0.00</td></tr>
+          <tr><td class="text-left">REGULAR OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
+          <tr><td class="text-left">NIGHT DIFFERENTIAL</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
+          <tr><td class="text-left">REGULAR OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
+          <tr><td class="text-left">REST DAY</td><td class="text-center" id="pBV">0</td><td class="amount" id="pBW">0.00</td></tr>
+          <tr><td class="text-left">REST DAY OT</td><td class="text-center" id="pBX">0</td><td class="amount" id="pBY">0.00</td></tr>
+          <tr><td class="text-left">REST DAY NP</td><td class="text-center" id="pBZ">0</td><td class="amount" id="pCA">0.00</td></tr>
+          <tr><td class="text-left">REST DAY NP OT</td><td class="text-center" id="pCB">0</td><td class="amount" id="pCC">0.00</td></tr>
+          <tr><td class="text-left">LEAVE WITH PAY</td><td class="text-center" id="pCT">0</td><td class="amount" id="pCU">0.00</td></tr>
+          <tr class="highlight-row">
+            <td colspan="2" class="text-left">GROSS PAY</td>
+            <td class="amount" id="pCX">0.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- DEDUCTIONS SECTION -->
+      <div class="section-header">DEDUCTIONS</div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 75%;">DEDUCTION ITEM</th>
+            <th class="amount" style="width: 25%;">AMOUNT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="text-left">WELFARE</td><td class="amount" id="pDA">0.00</td></tr>
+          <tr><td class="text-left">HEALTH INSURANCE</td><td class="amount" id="pDB">0.00</td></tr>
+          <tr><td class="text-left">INSURANCE CARD</td><td class="amount" id="pDC">0.00</td></tr>
+          <tr><td class="text-left">MISC.</td><td class="amount" id="pDD">0.00</td></tr>
+          <tr><td class="text-left">MEDICAL</td><td class="amount" id="pDE">0.00</td></tr>
+          <tr><td class="text-left">SALARY LOAN 1</td><td class="amount" id="pDF">0.00</td></tr>
+          <tr><td class="text-left">SALARY LOAN 2</td><td class="amount" id="pDG">0.00</td></tr>
+          <tr><td class="text-left">SALARY LOAN 3</td><td class="amount" id="pDR">0.00</td></tr>
+          <tr><td class="text-left">SSS LOAN</td><td class="amount" id="pDH">0.00</td></tr>
+          <tr><td class="text-left">SSS CALAMITY LOAN</td><td class="amount" id="pDI">0.00</td></tr>
+          <tr><td class="text-left">HDMF LOAN</td><td class="amount" id="pDJ">0.00</td></tr>
+          <tr><td class="text-left">HDMF CALAMITY LOAN</td><td class="amount" id="pDK">0.00</td></tr>
+          <tr class="highlight-row">
+            <td class="text-left">TOTAL DEDUCTIONS</td>
+            <td class="amount" id="pDO">0.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ADJUSTMENTS & NET TAKE HOME SECTION -->
+      <div class="section-header">ADJUSTMENTS & NET TAKE HOME</div>
+      <table class="table">
+        <tbody>
+          <tr><td class="text-left" style="width: 75%;">PAYROLL ADJUSTMENT 1</td><td class="amount" style="width: 25%;" id="pDP">0.00</td></tr>
+          <tr><td class="text-left">PAYROLL ADJUSTMENT 2</td><td class="amount" id="pDQ">0.00</td></tr>
+          <tr><td class="text-left">REFUND SALARY</td><td class="amount" id="pDT">0.00</td></tr>
+          <tr class="net-pay-row">
+            <td class="text-left">NET PAY</td>
+            <td class="amount" id="pDV">0.00</td>
+          </tr>
+        </tbody>
+      </table>
+
     </div>
-
-    <button onclick="window.print()" style="margin-top:15px; background:#3182ce;">PRINT PAYSLIP</button>
-    <button onclick="location.reload()" style="margin-top:8px; background:#e2e8f0; color:#2d3748;">LOGOUT</button>
   </div>
 
   <script>
@@ -101,83 +206,123 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    async function handleEmployeeLogin() {
+    async function viewPayslip() {
       const empId = document.getElementById("empId").value.trim().toUpperCase();
-      const pin = document.getElementById("empPin").value.trim();
-      const month = document.getElementById("payMonth").value.trim().toUpperCase();
-      const day = document.getElementById("payDay").value.trim();
-      const year = document.getElementById("payYear").value.trim();
+      const pin = document.getElementById("pin").value.trim();
+      
+      const month = document.getElementById("pMonth").value;
+      const day = document.getElementById("pDay").value.trim();
+      const year = document.getElementById("pYear").value.trim();
 
-      const errDiv = document.getElementById("loginError");
-      errDiv.style.display = "none";
+      const errorMsg = document.getElementById("errorMsg");
+      const box = document.getElementById("payslipBox");
 
-      if (!empId || !pin || !day || !year) {
-        errDiv.innerText = "PLEASE FILL IN ALL FIELDS.";
-        errDiv.style.display = "block";
+      errorMsg.style.display = "none";
+      box.style.display = "none";
+
+      if(!empId || !pin) {
+        errorMsg.innerText = "PLEASE ENTER BOTH EMPLOYEE ID AND PIN.";
+        errorMsg.style.display = "block";
         return;
       }
 
-      try {
-        // 1. Verify User PIN in admin_users
-        const userDoc = await db.collection("admin_users").doc(empId).get();
-        if (!userDoc.exists || userDoc.data().pin.trim() !== pin) {
-          errDiv.innerText = "INVALID EMPLOYEE ID OR PIN.";
-          errDiv.style.display = "block";
-          return;
-        }
-
-        // 2. Query payslips for Employee ID across all clients
-        const snapshot = await db.collection("payslips")
-          .where("empId", "==", empId)
-          .get();
-
-        if (snapshot.empty) {
-          errDiv.innerText = `NO PAYSLIP RECORDS FOUND FOR ID: ${empId}.`;
-          errDiv.style.display = "block";
-          return;
-        }
-
-        // 3. Match Date Flexible Logic
-        const searchDate = `${month} ${day} ${year}`.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
-
-        let matchedData = null;
-        let availableDates = [];
-
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const storedDate = (data.payrollDate || "").toString();
-          availableDates.push(storedDate);
-
-          const storedNormalized = storedDate.replace(/,/g, '').replace(/\s+/g, ' ').toUpperCase();
-
-          if (storedNormalized.includes(searchDate) || searchDate.includes(storedNormalized)) {
-            matchedData = data;
-          }
-        });
-
-        if (matchedData) {
-          renderPayslip(matchedData);
-        } else {
-          errDiv.innerText = `NO PAYSLIP FOUND FOR ${month} ${day}, ${year}.\n(Available in database: ${availableDates.join(" | ")})`;
-          errDiv.style.display = "block";
-        }
-
-      } catch (err) {
-        console.error("Login Error:", err);
-        errDiv.innerText = "AN ERROR OCCURRED WHILE CONNECTING TO DATABASE.";
-        errDiv.style.display = "block";
+      if(!month || !day || !year) {
+        errorMsg.innerText = "PLEASE SELECT MONTH, AND TYPE BOTH DAY AND YEAR.";
+        errorMsg.style.display = "block";
+        return;
       }
-    }
 
-    function renderPayslip(data) {
-      document.getElementById("loginCard").style.display = "none";
-      document.getElementById("payslipCard").style.display = "block";
+      // 1. Verify Employee Credentials
+      const empDoc = await db.collection("employees").doc(empId).get();
+      if(!empDoc.exists || empDoc.data().pin !== pin) {
+        errorMsg.innerText = "INVALID EMPLOYEE ID OR PIN.";
+        errorMsg.style.display = "block";
+        return;
+      }
 
-      document.getElementById("displayName").innerText = data.empName || "N/A";
-      document.getElementById("displayId").innerText = data.empId || "N/A";
-      document.getElementById("displayDate").innerText = data.payrollDate || "N/A";
-      document.getElementById("displayClient").innerText = data.clientName || "N/A";
-      document.getElementById("displayNet").innerText = "₱" + (data.netPay || "0.00");
+      // 2. Query payslips for this employee
+      const snapshot = await db.collection("payslips")
+        .where("empId", "==", empId)
+        .get();
+
+      if(snapshot.empty) {
+        errorMsg.innerText = "NO PAYSLIP RECORDS FOUND FOR THIS EMPLOYEE ID.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      // 3. Filter results locally to match Month, Day, and Year inside cell A3
+      let matchedPayslip = null;
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const pDateStr = String(data.payrollDate || "").toUpperCase();
+
+        if (pDateStr.includes(month) && pDateStr.includes(day) && pDateStr.includes(year)) {
+          matchedPayslip = data;
+        }
+      });
+
+      if(!matchedPayslip) {
+        errorMsg.innerText = `NO PAYSLIP FOUND FOR ${month} ${day}, ${year}. PLEASE CHECK THE DATE.`;
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      const p = matchedPayslip;
+
+      // Top Title: A1, A2, A3, A4
+      document.getElementById("pA1").innerText = p.company || "";
+      document.getElementById("pA2").innerText = p.client || "";
+      document.getElementById("pA3").innerText = p.payrollDate || "";
+      document.getElementById("pA4").innerText = p.payrollPeriod || "";
+
+      // Employee Info: F, G
+      document.getElementById("pF").innerText = p.empId || "";
+      document.getElementById("pG").innerText = p.empName || "";
+
+      // Earnings & Hours
+      document.getElementById("pAQ").innerText = p.regDaysCount || "-";
+      document.getElementById("pAR").innerText = p.regDaysAmt || "0.00";
+      document.getElementById("pAV").innerText = p.regOtCount || "-";
+      document.getElementById("pAW").innerText = p.regOtAmt || "0.00";
+      document.getElementById("pAZ").innerText = p.npCount || "-";
+      document.getElementById("pBA").innerText = p.npAmt || "0.00";
+      document.getElementById("pBB").innerText = p.regOtNpCount || "-";
+      document.getElementById("pBC").innerText = p.regOtNpAmt || "0.00";
+      document.getElementById("pBV").innerText = p.restDayCount || "-";
+      document.getElementById("pBW").innerText = p.restDayAmt || "0.00";
+      document.getElementById("pBX").innerText = p.restDayOtCount || "-";
+      document.getElementById("pBY").innerText = p.restDayOtAmt || "0.00";
+      document.getElementById("pBZ").innerText = p.restDayNpCount || "-";
+      document.getElementById("pCA").innerText = p.restDayNpAmt || "0.00";
+      document.getElementById("pCB").innerText = p.restDayNpOtCount || "-";
+      document.getElementById("pCC").innerText = p.restDayNpOtAmt || "0.00";
+      document.getElementById("pCT").innerText = p.leavePayCount || "-";
+      document.getElementById("pCU").innerText = p.leavePayAmt || "0.00";
+      document.getElementById("pCX").innerText = p.grossPay || "0.00";
+
+      // Deductions (Including Salary Loan 3)
+      document.getElementById("pDA").innerText = p.welfare || "0.00";
+      document.getElementById("pDB").innerText = p.healthInsurance || "0.00";
+      document.getElementById("pDC").innerText = p.insuranceCard || "0.00";
+      document.getElementById("pDD").innerText = p.misc || "0.00";
+      document.getElementById("pDE").innerText = p.medical || "0.00";
+      document.getElementById("pDF").innerText = p.salaryLoan1 || "0.00";
+      document.getElementById("pDG").innerText = p.salaryLoan2 || "0.00";
+      document.getElementById("pDR").innerText = p.salaryLoan3 || "0.00";
+      document.getElementById("pDH").innerText = p.sssLoan || "0.00";
+      document.getElementById("pDI").innerText = p.sssCalamityLoan || "0.00";
+      document.getElementById("pDJ").innerText = p.hdmfLoan || "0.00";
+      document.getElementById("pDK").innerText = p.hdmfCalamityLoan || "0.00";
+      document.getElementById("pDO").innerText = p.totalDeduction || "0.00";
+
+      // Adjustments & Net
+      document.getElementById("pDP").innerText = p.payrollAdj1 || "0.00";
+      document.getElementById("pDQ").innerText = p.payrollAdj2 || "0.00";
+      document.getElementById("pDT").innerText = p.refundSalary || "0.00";
+      document.getElementById("pDV").innerText = p.netPay || "0.00";
+
+      box.style.display = "block";
     }
   </script>
 </body>
