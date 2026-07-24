@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR Admin - Upload Payslips</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .card { background: white; width: 100%; max-width: 550px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { text-align: center; color: #1a202c; margin-top: 0; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: bold; margin-bottom: 8px; color: #4a5568; }
+    input[type="file"] { width: 100%; padding: 10px; border: 1px dashed #cbd5e0; border-radius: 6px; background: #faf5ff; }
+    button { width: 100%; padding: 12px; background: #38a169; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button:hover { background: #2f855a; }
+    .status { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; }
+    .success { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+    .error { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+  </style>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <!-- SheetJS for processing Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <div class="card">
+    <h2>HR Payroll Upload Portal</h2>
+    <div class="form-group">
+      <label>Select Payroll Excel Sheet (.xlsx)</label>
+      <input type="file" id="excelFile" accept=".xlsx, .xls">
+    </div>
+    <button onclick="processAndUpload()">Upload to Database</button>
+
+    <div id="statusBox" class="status"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
+      authDomain: "payslip-portal-328ef.firebaseapp.com",
+      projectId: "payslip-portal-328ef",
+      storageBucket: "payslip-portal-328ef.firebasestorage.app",
+      messagingSenderId: "552626296645",
+      appId: "1:552626296645:web:4810a048e188512927d02c",
+      measurementId: "G-D8SZDV2CTP"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function showStatus(msg, isError = false) {
+      const box = document.getElementById("statusBox");
+      box.innerText = msg;
+      box.className = "status " + (isError ? "error" : "success");
+      box.style.display = "block";
+    }
+
+    async function processAndUpload() {
+      const fileInput = document.getElementById("excelFile");
+      if (!fileInput.files.length) {
+        showStatus("Please select an Excel file first.", true);
+        return;
+      }
+
+      showStatus("Reading Excel file and updating database... Please wait.");
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          if (jsonData.length === 0) {
+            showStatus("The selected Excel sheet is empty.", true);
+            return;
+          }
+
+          let count = 0;
+          for (let row of jsonData) {
+            const empId = String(row["Employee ID"] || row["EMPLOYEE ID"] || row["Emp ID"] || "").trim().toUpperCase();
+            const pin = String(row["PIN"] || row["Pin"] || "").trim();
+
+            if (!empId) continue;
+
+            // 1. Update or create Employee credentials
+            if (pin) {
+              await db.collection("employees").doc(empId).set({
+                pin: pin,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              }, { merge: true });
+            }
+
+            // 2. Add Payslip record
+            row.empId = empId;
+            await db.collection("payslips").add(row);
+            count++;
+          }
+
+          showStatus(`✅ Successfully uploaded ${count} payslips! Employees can now view them.`);
+          fileInput.value = ""; // Reset file input
+
+        } catch (err) {
+          console.error(err);
+          showStatus("Error uploading data. Check console or database rules.", true);
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+  </script>
+</body>
+</html>
