@@ -3,35 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HR Admin - Payroll Upload</title>
+  <title>HR Admin - Payroll & Credentials Portal</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .card { background: white; width: 100%; max-width: 550px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    body { background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .card { background: white; width: 100%; max-width: 600px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
     h2 { text-align: center; color: #1a202c; margin-top: 0; }
-    .form-group { margin-bottom: 20px; }
+    h3 { margin-top: 0; color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; }
+    .form-group { margin-bottom: 15px; }
     label { display: block; font-weight: bold; margin-bottom: 8px; color: #4a5568; }
     input[type="file"] { width: 100%; padding: 10px; border: 1px dashed #cbd5e0; border-radius: 6px; background: #faf5ff; }
-    button { width: 100%; padding: 12px; background: #38a169; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    button:hover { background: #2f855a; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; }
+    .btn-green { background: #38a169; }
+    .btn-green:hover { background: #2f855a; }
+    .btn-blue { background: #3182ce; }
+    .btn-blue:hover { background: #2b6cb0; }
     .status { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; line-height: 1.4; }
     .success { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
     .error { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
   </style>
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <!-- SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
+  <!-- SECTION 1: CREDENTIALS ONLY UPLOAD -->
   <div class="card">
-    <h2>HR Payroll Secured Upload</h2>
+    <h3>1. Upload Employee PINs / Passwords</h3>
+    <p style="font-size: 13px; color: #718096; margin-bottom: 15px;">
+      Upload an Excel file with 2 columns: <strong>Column A = ID Number</strong>, <strong>Column B = 6-Digit PIN</strong>.
+    </p>
+    <div class="form-group">
+      <label>Select Credentials Sheet (.xlsx)</label>
+      <input type="file" id="credFile" accept=".xlsx, .xls">
+    </div>
+    <button class="btn-blue" onclick="uploadCredentials()">Update Employee PINs</button>
+    <div id="credStatus" class="status"></div>
+  </div>
+
+  <!-- SECTION 2: FULL PAYROLL UPLOAD -->
+  <div class="card">
+    <h3>2. Upload Payroll Payslips</h3>
+    <p style="font-size: 13px; color: #718096; margin-bottom: 15px;">
+      Upload the main payroll file containing the <strong>PAYROLL</strong> sheet tab.
+    </p>
     <div class="form-group">
       <label>Select Payroll Excel Sheet (.xlsx)</label>
-      <input type="file" id="excelFile" accept=".xlsx, .xls">
+      <input type="file" id="payrollFile" accept=".xlsx, .xls">
     </div>
-    <button onclick="processAndUpload()">Validate & Upload to Database</button>
-    <div id="statusBox" class="status"></div>
+    <button class="btn-green" onclick="processAndUploadPayroll()">Validate & Upload Payroll</button>
+    <div id="payrollStatus" class="status"></div>
   </div>
 
   <script>
@@ -48,21 +72,113 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    function showStatus(msg, isError = false) {
-      const box = document.getElementById("statusBox");
+    function showStatus(elementId, msg, isError = false) {
+      const box = document.getElementById(elementId);
       box.innerText = msg;
       box.className = "status " + (isError ? "error" : "success");
       box.style.display = "block";
     }
 
-    async function processAndUpload() {
-      const fileInput = document.getElementById("excelFile");
+    // ==========================================
+    // 1. CREDENTIALS UPLOAD LOGIC (2 COLUMNS)
+    // ==========================================
+    async function uploadCredentials() {
+      const fileInput = document.getElementById("credFile");
       if (!fileInput.files.length) {
-        showStatus("Please select an Excel file first.", true);
+        showStatus("credStatus", "Please select a file first.", true);
         return;
       }
 
-      showStatus("Validating rules and checking for duplicates...");
+      showStatus("credStatus", "Reading file and validating ID/PIN format...");
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+          // Convert sheet using cell addresses (A = ID, B = PIN)
+          const rawRows = XLSX.utils.sheet_to_json(firstSheet, { header: "A", raw: false });
+
+          if (rawRows.length === 0) {
+            showStatus("credStatus", "❌ Upload Rejected: The file contains no data.", true);
+            return;
+          }
+
+          // --- VALIDATION PHASE ---
+          const recordsToUpload = [];
+
+          for (let i = 0; i < rawRows.length; i++) {
+            const row = rawRows[i];
+            const rowNum = i + 1;
+
+            const empId = String(row['A'] || "").trim().toUpperCase();
+            const pin = String(row['B'] || "").trim();
+
+            // Skip header row if labeled "ID" or "EMPLOYEE ID"
+            if (empId.includes("ID") || empId.includes("NUMBER")) continue;
+            if (!empId && !pin) continue; // Skip empty rows
+
+            if (!empId) {
+              showStatus("credStatus", `❌ Error on Row ${rowNum}: ID Number is missing.`, true);
+              return;
+            }
+
+            // ID format check (Starts with IS or numeric)
+            const isPrefixed = /^IS[-]?\w+/i.test(empId);
+            const isNumeric = /^\d+$/.test(empId);
+            if (!isPrefixed && !isNumeric) {
+              showStatus("credStatus", `❌ Invalid ID on Row ${rowNum}: '${empId}' must start with 'IS' or be numbers only.`, true);
+              return;
+            }
+
+            // PIN format check (Strictly 6 digits)
+            if (!/^\d{6}$/.test(pin)) {
+              showStatus("credStatus", `❌ Invalid PIN on Row ${rowNum}: PIN '${pin}' must be a 6-digit number.`, true);
+              return;
+            }
+
+            recordsToUpload.push({ empId, pin });
+          }
+
+          // --- UPLOAD PHASE ---
+          showStatus("credStatus", "Validation passed! Updating employee database...");
+
+          let count = 0;
+          for (let item of recordsToUpload) {
+            await db.collection("employees").doc(item.empId).set({
+              pin: item.pin,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            count++;
+          }
+
+          showStatus("credStatus", `✅ Success! Updated credentials for ${count} employees.`);
+          fileInput.value = "";
+
+        } catch (err) {
+          console.error(err);
+          showStatus("credStatus", "System Error processing credentials file.", true);
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ==========================================
+    // 2. FULL PAYROLL UPLOAD LOGIC
+    // ==========================================
+    async function processAndUploadPayroll() {
+      const fileInput = document.getElementById("payrollFile");
+      if (!fileInput.files.length) {
+        showStatus("payrollStatus", "Please select a payroll file first.", true);
+        return;
+      }
+
+      showStatus("payrollStatus", "Validating payroll rules and duplicate checks...");
 
       const file = fileInput.files[0];
       const reader = new FileReader();
@@ -72,64 +188,51 @@
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
 
-          // Rule 1: Must contain 'PAYROLL' tab
           const payrollTabName = workbook.SheetNames.find(
             name => name.trim().toUpperCase() === "PAYROLL"
           );
 
           if (!payrollTabName) {
-            showStatus("❌ Upload Rejected: Must contain a tab named 'PAYROLL'.", true);
+            showStatus("payrollStatus", "❌ Upload Rejected: File must contain a tab named 'PAYROLL'.", true);
             return;
           }
 
           const worksheet = workbook.Sheets[payrollTabName];
 
-          // Rule 2: A1, A2, A3, A4 must have data
           const valA1 = worksheet['A1'] ? String(worksheet['A1'].v).trim() : "";
           const valA2 = worksheet['A2'] ? String(worksheet['A2'].v).trim() : "";
           const valA3 = worksheet['A3'] ? String(worksheet['A3'].v).trim() : "";
           const valA4 = worksheet['A4'] ? String(worksheet['A4'].v).trim() : "";
 
           if (!valA1 || !valA2 || !valA3 || !valA4) {
-            showStatus("❌ Upload Rejected: Header cells A1, A2, A3, or A4 are missing.", true);
+            showStatus("payrollStatus", "❌ Upload Rejected: Cells A1, A2, A3, or A4 are missing.", true);
             return;
           }
 
-          // Rule 3 & 4: Prevent Duplicate Uploads
           const duplicateCheck = await db.collection("uploaded_payrolls")
             .where("payrollDate", "==", valA3)
             .where("payrollPeriod", "==", valA4)
             .get();
 
           if (!duplicateCheck.empty) {
-            showStatus(`❌ Duplicate Upload Rejected: (${valA3} | ${valA4}) was already uploaded!`, true);
+            showStatus("payrollStatus", `❌ Duplicate Rejected: Payroll for '${valA3}' was already uploaded!`, true);
             return;
           }
 
-          // Parse rows as raw array to extract exact column positions
           const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: "A", raw: false });
-
-          showStatus("Uploading mapped payslip fields...");
+          showStatus("payrollStatus", "Validation passed! Uploading payslip records...");
 
           let count = 0;
-          // Row 1 to 5 are headers; data usually starts at Row 6 or 7
           for (let i = 5; i < rawRows.length; i++) {
             const r = rawRows[i];
-            
             const empId = String(r['F'] || "").trim().toUpperCase();
             const empName = String(r['G'] || "").trim();
 
-            if (!empId || !empName) continue; // Skip empty rows
+            if (!empId || !empName) continue;
 
             const payslipData = {
-              empId: empId,
-              empName: empName,
-              company: valA1,
-              client: valA2,
-              payrollDate: valA3,
-              payrollPeriod: valA4,
-              
-              // Earnings / Hours
+              empId, empName,
+              company: valA1, client: valA2, payrollDate: valA3, payrollPeriod: valA4,
               regDaysCount: r['AQ'] || "0", regDaysAmt: r['AR'] || "0.00",
               regOtCount: r['AV'] || "0",   regOtAmt: r['AW'] || "0.00",
               npCount: r['AZ'] || "0",      npAmt: r['BA'] || "0.00",
@@ -139,28 +242,15 @@
               restDayNpCount: r['BZ'] || "0", restDayNpAmt: r['CA'] || "0.00",
               restDayNpOtCount: r['CB'] || "0", restDayNpOtAmt: r['CC'] || "0.00",
               leavePayCount: r['CT'] || "0", leavePayAmt: r['CU'] || "0.00",
-              
               grossPay: r['CX'] || "0.00",
-
-              // Deductions
-              welfare: r['DA'] || "0.00",
-              healthInsurance: r['DB'] || "0.00",
-              insuranceCard: r['DC'] || "0.00",
-              misc: r['DD'] || "0.00",
-              medical: r['DE'] || "0.00",
-              salaryLoan1: r['DF'] || "0.00",
-              salaryLoan2: r['DG'] || "0.00",
-              sssLoan: r['DH'] || "0.00",
-              sssCalamityLoan: r['DI'] || "0.00",
-              hdmfLoan: r['DJ'] || "0.00",
-              hdmfCalamityLoan: r['DK'] || "0.00",
-              totalDeduction: r['DO'] || "0.00",
-
-              // Adjustments & Net Pay
-              payrollAdj1: r['DP'] || "0.00",
-              payrollAdj2: r['DQ'] || "0.00",
-              salaryLoan3: r['DR'] || "0.00",
-              refundSalary: r['DT'] || "0.00",
+              welfare: r['DA'] || "0.00", healthInsurance: r['DB'] || "0.00",
+              insuranceCard: r['DC'] || "0.00", misc: r['DD'] || "0.00",
+              medical: r['DE'] || "0.00", salaryLoan1: r['DF'] || "0.00",
+              salaryLoan2: r['DG'] || "0.00", sssLoan: r['DH'] || "0.00",
+              sssCalamityLoan: r['DI'] || "0.00", hdmfLoan: r['DJ'] || "0.00",
+              hdmfCalamityLoan: r['DK'] || "0.00", totalDeduction: r['DO'] || "0.00",
+              payrollAdj1: r['DP'] || "0.00", payrollAdj2: r['DQ'] || "0.00",
+              salaryLoan3: r['DR'] || "0.00", refundSalary: r['DT'] || "0.00",
               netPay: r['DV'] || "0.00"
             };
 
@@ -168,21 +258,17 @@
             count++;
           }
 
-          // Register successful upload batch
           await db.collection("uploaded_payrolls").add({
-            company: valA1,
-            client: valA2,
-            payrollDate: valA3,
-            payrollPeriod: valA4,
+            company: valA1, client: valA2, payrollDate: valA3, payrollPeriod: valA4,
             uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
 
-          showStatus(`✅ Successfully uploaded ${count} payslips for ${valA3}!`);
+          showStatus("payrollStatus", `✅ Successfully uploaded ${count} payslips for '${valA3}'!`);
           fileInput.value = "";
 
         } catch (err) {
           console.error(err);
-          showStatus("System Error reading Excel columns.", true);
+          showStatus("payrollStatus", "System Error processing payroll file.", true);
         }
       };
 
