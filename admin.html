@@ -21,6 +21,9 @@
     .error-msg { color: #e53e3e; font-size: 13px; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
     .status-msg { font-size: 13px; font-weight: bold; text-align: center; margin-top: 10px; }
 
+    /* HIDDEN AUTH BOXES ON QUICK UPLOAD */
+    .auth-box-hidden { display: none; background: #edf2f7; padding: 15px; border-radius: 8px; margin-top: 10px; }
+
     /* DASHBOARD LAYOUT */
     .dashboard { display: none; width: 100%; max-width: 1100px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px; }
@@ -40,7 +43,7 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
     /* TABLES */
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
     th { background: #edf2f7; padding: 10px; text-align: left; color: #4a5568; border-bottom: 2px solid #cbd5e0; }
     td { padding: 10px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
 
@@ -50,12 +53,12 @@
     .tab-item.active { color: #3182ce; border-bottom-color: #3182ce; }
 
     /* TOGGLE SWITCH */
-    .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
     .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e0; transition: .3s; border-radius: 22px; }
-    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e0; transition: .3s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
     input:checked + .slider { background-color: #48bb78; }
-    input:checked + .slider:before { transform: translateX(22px); }
+    input:checked + .slider:before { transform: translateX(20px); }
 
     /* MODAL POPUP */
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:999; }
@@ -89,25 +92,48 @@
       <div id="loginError" class="error-msg"></div>
     </div>
 
-    <!-- DIRECT PAYSLIP FILE UPLOAD -->
+    <!-- QUICK PAYROLL EXCEL UPLOAD -->
     <div class="auth-card" style="background:#f7fafc; border:1px dashed #cbd5e0;">
-      <h2 style="border:none; padding:0;">QUICK PAYSLIP UPLOAD</h2>
-      <p style="font-size:12px; color:#718096; text-align:center; margin-top:-5px;">Enter authorized ID & PIN to upload payroll files directly.</p>
-
-      <div class="input-group">
-        <label>UPLOADER ID</label>
-        <input type="text" id="uploaderId" placeholder="ENTER ID">
-      </div>
-      <div class="input-group">
-        <label>6-DIGIT PIN</label>
-        <input type="password" id="uploaderPin" placeholder="ENTER PIN">
-      </div>
-      <div class="input-group">
+      <h2 style="border:none; padding:0; font-size:16px;">QUICK PAYROLL UPLOAD</h2>
+      <div class="input-group" style="margin-top:10px;">
         <label>SELECT PAYROLL EXCEL FILE</label>
-        <input type="file" id="directExcelFile" accept=".xlsx, .xls">
+        <input type="file" id="directPayrollFile" accept=".xlsx, .xls" onchange="showPayrollAuthBox()">
       </div>
-      <button onclick="handleDirectUpload()" style="background:#38a169;">UPLOAD PAYROLL FILE</button>
-      <div id="directUploadStatus" class="status-msg"></div>
+
+      <div id="payrollAuthBox" class="auth-box-hidden">
+        <div class="input-group">
+          <label>AUTHORIZER ID</label>
+          <input type="text" id="payrollUploaderId" placeholder="ENTER ID">
+        </div>
+        <div class="input-group">
+          <label>6-DIGIT PIN</label>
+          <input type="password" id="payrollUploaderPin" placeholder="ENTER PIN">
+        </div>
+        <button onclick="handleDirectPayrollUpload()" style="background:#38a169;">UPLOAD PAYROLL</button>
+      </div>
+      <div id="payrollUploadStatus" class="status-msg"></div>
+    </div>
+
+    <!-- QUICK USERS EXCEL UPLOAD -->
+    <div class="auth-card" style="background:#f7fafc; border:1px dashed #cbd5e0;">
+      <h2 style="border:none; padding:0; font-size:16px;">QUICK USERS UPLOAD</h2>
+      <div class="input-group" style="margin-top:10px;">
+        <label>SELECT USERS EXCEL FILE</label>
+        <input type="file" id="directUserFile" accept=".xlsx, .xls" onchange="showUsersAuthBox()">
+      </div>
+
+      <div id="usersAuthBox" class="auth-box-hidden">
+        <div class="input-group">
+          <label>AUTHORIZER ID</label>
+          <input type="text" id="userUploaderId" placeholder="ENTER ID">
+        </div>
+        <div class="input-group">
+          <label>6-DIGIT PIN</label>
+          <input type="password" id="userUploaderPin" placeholder="ENTER PIN">
+        </div>
+        <button onclick="handleDirectUsersUpload()" style="background:#2b6cb0;">UPLOAD USERS</button>
+      </div>
+      <div id="usersUploadStatus" class="status-msg"></div>
     </div>
 
   </div>
@@ -144,9 +170,9 @@
             <input type="password" id="newUserPin" placeholder="ENTER PIN">
           </div>
           <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="margin:0;">CAN UPLOAD FILE?</label>
+            <label style="margin:0;">CAN UPLOAD PAYROLL?</label>
             <label class="switch">
-              <input type="checkbox" id="newUserUpload">
+              <input type="checkbox" id="newUserUploadPayroll">
               <span class="slider"></span>
             </label>
           </div>
@@ -154,6 +180,13 @@
             <label style="margin:0;">CAN OVERRIDE DUPLICATES?</label>
             <label class="switch">
               <input type="checkbox" id="newUserOverride">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
+            <label style="margin:0;">CAN UPLOAD USERS?</label>
+            <label class="switch">
+              <input type="checkbox" id="newUserUploadUsers">
               <span class="slider"></span>
             </label>
           </div>
@@ -166,11 +199,12 @@
           <p style="font-size:12px; color:#718096; margin-top:0;">
             Columns:<br>
             • <b>Col A:</b> ID | <b>Col B:</b> PIN<br>
-            • <b>Col C:</b> Can Upload (TRUE/FALSE)<br>
-            • <b>Col D:</b> Can Override (TRUE/FALSE)
+            • <b>Col C:</b> Upload Payroll (TRUE/FALSE)<br>
+            • <b>Col D:</b> Override Duplicates (TRUE/FALSE)<br>
+            • <b>Col E:</b> Upload Users (TRUE/FALSE)
           </p>
           <input type="file" id="userExcelFile" accept=".xlsx, .xls" style="margin-bottom:15px;">
-          <button onclick="uploadBulkUsers()">UPLOAD USERS EXCEL</button>
+          <button onclick="uploadBulkUsersDash()">UPLOAD USERS EXCEL</button>
         </div>
       </div>
 
@@ -181,8 +215,9 @@
           <thead>
             <tr>
               <th>USER ID</th>
-              <th>CAN UPLOAD?</th>
-              <th>CAN OVERRIDE?</th>
+              <th>UPLOAD PAYROLL?</th>
+              <th>OVERRIDE?</th>
+              <th>UPLOAD USERS?</th>
               <th>ACTION</th>
             </tr>
           </thead>
@@ -265,13 +300,24 @@
 
     // --- INITIALIZATION ---
     window.onload = async function() {
-      // Seed Master Admin (IS-058 / 101992) if not existing
+      // Seed Master Admin (IS-058 / 101992) with all 3 permissions enabled
       const masterRef = db.collection("admin_users").doc("IS-058");
       const masterDoc = await masterRef.get();
       if (!masterDoc.exists) {
-        await masterRef.set({ pin: "101992", canUpload: true, canOverride: true });
+        await masterRef.set({ pin: "101992", canUploadPayroll: true, canOverride: true, canUploadUsers: true });
       }
     };
+
+    // --- REVEAL AUTH BOXES ON FILE SELECT ---
+    function showPayrollAuthBox() {
+      const fileInput = document.getElementById("directPayrollFile");
+      document.getElementById("payrollAuthBox").style.display = fileInput.files.length ? "block" : "none";
+    }
+
+    function showUsersAuthBox() {
+      const fileInput = document.getElementById("directUserFile");
+      document.getElementById("usersAuthBox").style.display = fileInput.files.length ? "block" : "none";
+    }
 
     // --- 1. LOGIN / LOGOUT ---
     async function handleLogin() {
@@ -290,8 +336,9 @@
       if (doc.exists && doc.data().pin === pin) {
         loggedInUser = { 
           id: id, 
-          canUpload: doc.data().canUpload || false, 
-          canOverride: doc.data().canOverride || false 
+          canUploadPayroll: doc.data().canUploadPayroll || false, 
+          canOverride: doc.data().canOverride || false,
+          canUploadUsers: doc.data().canUploadUsers || false
         };
         document.getElementById("currentAdminTag").innerText = `LOGGED IN AS: ${id}`;
         document.getElementById("loginPortal").style.display = "none";
@@ -333,71 +380,95 @@
     async function saveSingleUser() {
       const id = document.getElementById("newUserId").value.trim().toUpperCase();
       const pin = document.getElementById("newUserPin").value.trim();
-      const canUpload = document.getElementById("newUserUpload").checked;
+      const canUploadPayroll = document.getElementById("newUserUploadPayroll").checked;
       const canOverride = document.getElementById("newUserOverride").checked;
+      const canUploadUsers = document.getElementById("newUserUploadUsers").checked;
 
       if (!id || !pin) { alert("Please enter User ID and PIN."); return; }
 
       await db.collection("admin_users").doc(id).set({ 
         pin: pin, 
-        canUpload: canUpload, 
-        canOverride: canOverride 
+        canUploadPayroll: canUploadPayroll, 
+        canOverride: canOverride,
+        canUploadUsers: canUploadUsers
       });
 
       alert(`User ${id} saved successfully!`);
       document.getElementById("newUserId").value = "";
       document.getElementById("newUserPin").value = "";
-      document.getElementById("newUserUpload").checked = false;
+      document.getElementById("newUserUploadPayroll").checked = false;
       document.getElementById("newUserOverride").checked = false;
+      document.getElementById("newUserUploadUsers").checked = false;
       loadUsersList();
     }
 
-    async function uploadBulkUsers() {
+    // Process bulk user excel parsing
+    async function processUsersExcel(file, statusDiv) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const range = XLSX.utils.decode_range(sheet['!ref']);
+
+            const batch = db.batch();
+            let count = 0;
+
+            const parseBool = (cell) => {
+              if (!cell) return false;
+              const val = String(cell.v).trim().toLowerCase();
+              return (val === 'true' || val === 'on' || val === '1' || val === 'yes');
+            };
+
+            for (let R = 0; R <= range.e.r; ++R) {
+              const idCell = sheet[XLSX.utils.encode_cell({ r: R, c: 0 })];
+              const pinCell = sheet[XLSX.utils.encode_cell({ r: R, c: 1 })];
+              const uploadPayrollCell = sheet[XLSX.utils.encode_cell({ r: R, c: 2 })];
+              const overrideCell = sheet[XLSX.utils.encode_cell({ r: R, c: 3 })];
+              const uploadUsersCell = sheet[XLSX.utils.encode_cell({ r: R, c: 4 })];
+
+              if (!idCell || !pinCell) continue;
+
+              const uid = String(idCell.v).trim().toUpperCase();
+              const upin = String(pinCell.v).trim();
+
+              const ref = db.collection("admin_users").doc(uid);
+              batch.set(ref, { 
+                pin: upin, 
+                canUploadPayroll: parseBool(uploadPayrollCell), 
+                canOverride: parseBool(overrideCell),
+                canUploadUsers: parseBool(uploadUsersCell)
+              });
+              count++;
+            }
+
+            await batch.commit();
+            resolve(count);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    async function uploadBulkUsersDash() {
       const fileInput = document.getElementById("userExcelFile");
       if (!fileInput.files.length) { alert("Select an Excel file first."); return; }
-
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const range = XLSX.utils.decode_range(sheet['!ref']);
-
-        const batch = db.batch();
-        let count = 0;
-
-        for (let R = 0; R <= range.e.r; ++R) {
-          const idCell = sheet[XLSX.utils.encode_cell({ r: R, c: 0 })];
-          const pinCell = sheet[XLSX.utils.encode_cell({ r: R, c: 1 })];
-          const uploadCell = sheet[XLSX.utils.encode_cell({ r: R, c: 2 })];
-          const overrideCell = sheet[XLSX.utils.encode_cell({ r: R, c: 3 })];
-
-          if (!idCell || !pinCell) continue;
-
-          const uid = String(idCell.v).trim().toUpperCase();
-          const upin = String(pinCell.v).trim();
-          
-          const upVal = uploadCell ? String(uploadCell.v).trim().toLowerCase() : "";
-          const canUpload = (upVal === 'true' || upVal === 'on' || upVal === '1' || upVal === 'yes');
-
-          const ovVal = overrideCell ? String(overrideCell.v).trim().toLowerCase() : "";
-          const canOverride = (ovVal === 'true' || ovVal === 'on' || ovVal === '1' || ovVal === 'yes');
-
-          const ref = db.collection("admin_users").doc(uid);
-          batch.set(ref, { pin: upin, canUpload: canUpload, canOverride: canOverride });
-          count++;
-        }
-
-        await batch.commit();
+      try {
+        const count = await processUsersExcel(fileInput.files[0]);
         alert(`Successfully uploaded ${count} users!`);
         loadUsersList();
-      };
-      reader.readAsArrayBuffer(fileInput.files[0]);
+      } catch(e) {
+        alert("Upload error: " + e.message);
+      }
     }
 
     async function loadUsersList() {
       const tbody = document.getElementById("userTableBody");
-      tbody.innerHTML = "<tr><td colspan='4'>Loading users...</td></tr>";
+      tbody.innerHTML = "<tr><td colspan='5'>Loading users...</td></tr>";
 
       const snapshot = await db.collection("admin_users").get();
       tbody.innerHTML = "";
@@ -409,13 +480,19 @@
           <td><b>${doc.id}</b></td>
           <td>
             <label class="switch">
-              <input type="checkbox" ${u.canUpload ? 'checked' : ''} onchange="toggleUserPerm('${doc.id}', 'canUpload', this.checked)">
+              <input type="checkbox" ${u.canUploadPayroll ? 'checked' : ''} onchange="toggleUserPerm('${doc.id}', 'canUploadPayroll', this.checked)">
               <span class="slider"></span>
             </label>
           </td>
           <td>
             <label class="switch">
               <input type="checkbox" ${u.canOverride ? 'checked' : ''} onchange="toggleUserPerm('${doc.id}', 'canOverride', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td>
+            <label class="switch">
+              <input type="checkbox" ${u.canUploadUsers ? 'checked' : ''} onchange="toggleUserPerm('${doc.id}', 'canUploadUsers', this.checked)">
               <span class="slider"></span>
             </label>
           </td>
@@ -437,45 +514,43 @@
       }
     }
 
-    // --- 3. DIRECT PAYSLIP UPLOAD FROM LOGIN PAGE ---
-    async function handleDirectUpload() {
-      const uploaderId = document.getElementById("uploaderId").value.trim().toUpperCase();
-      const uploaderPin = document.getElementById("uploaderPin").value.trim();
-      const fileInput = document.getElementById("directExcelFile");
-      const statusDiv = document.getElementById("directUploadStatus");
+    // --- 3. DIRECT PAYROLL UPLOAD FROM LOGIN PAGE ---
+    async function handleDirectPayrollUpload() {
+      const uploaderId = document.getElementById("payrollUploaderId").value.trim().toUpperCase();
+      const uploaderPin = document.getElementById("payrollUploaderPin").value.trim();
+      const fileInput = document.getElementById("directPayrollFile");
+      const statusDiv = document.getElementById("payrollUploadStatus");
 
       statusDiv.style.color = "black";
       statusDiv.innerText = "";
 
       if (!uploaderId || !uploaderPin) {
         statusDiv.style.color = "red";
-        statusDiv.innerText = "PLEASE ENTER BOTH UPLOADER ID AND PIN.";
+        statusDiv.innerText = "PLEASE ENTER BOTH ID AND PIN.";
         return;
       }
 
       if (!fileInput.files.length) {
         statusDiv.style.color = "red";
-        statusDiv.innerText = "PLEASE SELECT AN EXCEL FILE TO UPLOAD.";
+        statusDiv.innerText = "PLEASE SELECT AN EXCEL FILE.";
         return;
       }
 
       statusDiv.innerText = "Verifying Uploader Permissions...";
 
-      // Verify User and Check Uploader Switch Status
       const userDoc = await db.collection("admin_users").doc(uploaderId).get();
       if (!userDoc.exists || userDoc.data().pin !== uploaderPin) {
         statusDiv.style.color = "red";
-        statusDiv.innerText = "INVALID UPLOADER ID OR PIN.";
+        statusDiv.innerText = "INVALID ID OR PIN.";
         return;
       }
 
-      if (!userDoc.data().canUpload) {
+      if (!userDoc.data().canUploadPayroll) {
         statusDiv.style.color = "red";
-        statusDiv.innerText = "ACCESS DENIED: This ID does not have Upload Permissions enabled.";
+        statusDiv.innerText = "ACCESS DENIED: No Payroll Upload permissions.";
         return;
       }
 
-      // Read File
       const file = fileInput.files[0];
       const reader = new FileReader();
       statusDiv.innerText = "Reading Excel contents...";
@@ -497,7 +572,6 @@
             return;
           }
 
-          // Duplicate Check
           const dupQuery = await db.collection("payslips")
             .where("client", "==", clientName)
             .where("payrollDate", "==", payrollDate)
@@ -517,7 +591,6 @@
           };
 
           if (!dupQuery.empty) {
-            // DUPLICATE DETECTED -> Open Modal
             document.getElementById("modalDetailText").innerHTML = 
               `Duplicate Batch Detected:<br>` +
               `• <b>Client:</b> ${clientName}<br>` +
@@ -525,7 +598,6 @@
               `• <b>Cut-off Date:</b> ${payrollPeriod}`;
             openModal();
           } else {
-            // NO DUPLICATE -> Process upload directly
             await executeBatchSave(false, uploaderId, statusDiv);
           }
 
@@ -536,6 +608,54 @@
       };
 
       reader.readAsArrayBuffer(file);
+    }
+
+    // --- 4. DIRECT USERS UPLOAD FROM LOGIN PAGE ---
+    async function handleDirectUsersUpload() {
+      const uploaderId = document.getElementById("userUploaderId").value.trim().toUpperCase();
+      const uploaderPin = document.getElementById("userUploaderPin").value.trim();
+      const fileInput = document.getElementById("directUserFile");
+      const statusDiv = document.getElementById("usersUploadStatus");
+
+      statusDiv.style.color = "black";
+      statusDiv.innerText = "";
+
+      if (!uploaderId || !uploaderPin) {
+        statusDiv.style.color = "red";
+        statusDiv.innerText = "PLEASE ENTER BOTH ID AND PIN.";
+        return;
+      }
+
+      if (!fileInput.files.length) {
+        statusDiv.style.color = "red";
+        statusDiv.innerText = "PLEASE SELECT AN EXCEL FILE.";
+        return;
+      }
+
+      statusDiv.innerText = "Verifying Uploader Permissions...";
+
+      const userDoc = await db.collection("admin_users").doc(uploaderId).get();
+      if (!userDoc.exists || userDoc.data().pin !== uploaderPin) {
+        statusDiv.style.color = "red";
+        statusDiv.innerText = "INVALID ID OR PIN.";
+        return;
+      }
+
+      if (!userDoc.data().canUploadUsers) {
+        statusDiv.style.color = "red";
+        statusDiv.innerText = "ACCESS DENIED: No User Upload permissions.";
+        return;
+      }
+
+      statusDiv.innerText = "Processing User excel records...";
+      try {
+        const count = await processUsersExcel(fileInput.files[0], statusDiv);
+        statusDiv.style.color = "green";
+        statusDiv.innerText = `SUCCESS: Added/Updated ${count} Admin Users.`;
+      } catch (err) {
+        statusDiv.style.color = "red";
+        statusDiv.innerText = `Error: ${err.message}`;
+      }
     }
 
     function openModal() {
@@ -659,7 +779,7 @@
       pendingUploadData = null;
     }
 
-    // --- 4. PAYSLIP DATA GROUPED BY CLIENT TABS ---
+    // --- 5. PAYSLIP DATA GROUPED BY CLIENT TABS ---
     async function loadPayslipDataTabs() {
       const tabsContainer = document.getElementById("clientTabsContainer");
       const tableContainer = document.getElementById("clientTableContainer");
@@ -735,7 +855,7 @@
       container.innerHTML = html;
     }
 
-    // --- 5. HISTORY LOGS ---
+    // --- 6. HISTORY LOGS ---
     async function loadHistoryList() {
       const tbody = document.getElementById("historyTableBody");
       tbody.innerHTML = "<tr><td colspan='6'>Loading logs...</td></tr>";
