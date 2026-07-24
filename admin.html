@@ -16,7 +16,6 @@
     .status-msg { margin-top: 15px; font-weight: bold; font-size: 14px; }
   </style>
 
-  <!-- Firebase & XLSX Libraries -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -70,7 +69,6 @@
           const workbook = XLSX.read(data, { type: 'array' });
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
-          // 1. READ CELL A2 (Client Name) & CELL A3 (Payroll Date)
           const cellA2 = worksheet['A2'] ? worksheet['A2'].v : "DEFAULT_CLIENT";
           const cellA3 = worksheet['A3'] ? worksheet['A3'].v : null;
 
@@ -92,14 +90,12 @@
             return cell ? String(cell.v).replace(/\s+/g, ' ').trim() : "";
           };
 
-          // 2. PARSE ROWS (Starting Row 6 / Index 5)
           for (let R = 5; R <= range.e.r; ++R) {
-            const empId = getCellValue(R, 5).toUpperCase();   // Col F (Emp ID)
-            const empName = getCellValue(R, 6).toUpperCase(); // Col G (Emp Name)
+            const empId = getCellValue(R, 5).toUpperCase();   // Col F
+            const empName = getCellValue(R, 6).toUpperCase(); // Col G
 
             if (!empId) continue;
 
-            // ISOLATED DOC ID: Emp ID + Client + Cleaned Date
             const cleanKey = `${empId}_${clientName}_${payrollDate}`.replace(/[^A-Z0-9]/g, '');
             const payslipRef = db.collection("payslips").doc(cleanKey);
 
