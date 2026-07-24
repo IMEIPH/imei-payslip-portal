@@ -166,8 +166,8 @@
             <input type="text" id="newUserId" placeholder="ENTER ID">
           </div>
           <div class="input-group">
-            <label>PIN (6-DIGIT)</label>
-            <input type="password" id="newUserPin" placeholder="ENTER PIN">
+            <label>PIN (MUST BE 6-DIGITS)</label>
+            <input type="password" id="newUserPin" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
           </div>
           <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
             <label style="margin:0;">CAN UPLOAD PAYROLL?</label>
@@ -197,11 +197,10 @@
         <div class="card">
           <h3>BULK ADD USERS (EXCEL)</h3>
           <p style="font-size:12px; color:#718096; margin-top:0;">
-            Columns:<br>
-            • <b>Col A:</b> ID | <b>Col B:</b> PIN<br>
-            • <b>Col C:</b> Upload Payroll (TRUE/FALSE)<br>
-            • <b>Col D:</b> Override Duplicates (TRUE/FALSE)<br>
-            • <b>Col E:</b> Upload Users (TRUE/FALSE)
+            Columns Required:<br>
+            • <b>Col A:</b> ID (Required)<br>
+            • <b>Col B:</b> PIN (Required - Exactly 6 Digits)<br>
+            • <i>Optional:</i> Col C (Payroll), Col D (Override), Col E (Users)
           </p>
           <input type="file" id="userExcelFile" accept=".xlsx, .xls" style="margin-bottom:15px;">
           <button onclick="uploadBulkUsersDash()">UPLOAD USERS EXCEL</button>
@@ -300,7 +299,7 @@
 
     // --- INITIALIZATION ---
     window.onload = async function() {
-      // Seed Master Admin (IS-058 / 101992) with all 3 permissions enabled
+      // Seed Master Admin (IS-058 / 101992) if not existing
       const masterRef = db.collection("admin_users").doc("IS-058");
       const masterDoc = await masterRef.get();
       if (!masterDoc.exists) {
@@ -386,6 +385,12 @@
 
       if (!id || !pin) { alert("Please enter User ID and PIN."); return; }
 
+      // Validate 6-Digit PIN
+      if (!/^\d{6}$/.exec(pin)) {
+        alert("ERROR: PIN must be exactly 6 numeric digits.");
+        return;
+      }
+
       await db.collection("admin_users").doc(id).set({ 
         pin: pin, 
         canUploadPayroll: canUploadPayroll, 
@@ -402,8 +407,8 @@
       loadUsersList();
     }
 
-    // Process bulk user excel parsing
-    async function processUsersExcel(file, statusDiv) {
+    // --- STRICT USER EXCEL PARSER ---
+    async function processUsersExcel(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -413,8 +418,7 @@
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const range = XLSX.utils.decode_range(sheet['!ref']);
 
-            const batch = db.batch();
-            let count = 0;
+            const parsedUsers = [];
 
             const parseBool = (cell) => {
               if (!cell) return false;
@@ -429,23 +433,50 @@
               const overrideCell = sheet[XLSX.utils.encode_cell({ r: R, c: 3 })];
               const uploadUsersCell = sheet[XLSX.utils.encode_cell({ r: R, c: 4 })];
 
-              if (!idCell || !pinCell) continue;
+              // Skip completely blank rows
+              if (!idCell && !pinCell) continue;
 
-              const uid = String(idCell.v).trim().toUpperCase();
-              const upin = String(pinCell.v).trim();
+              const rowNum = R + 1;
+              const uid = idCell ? String(idCell.v).trim().toUpperCase() : "";
+              const upin = pinCell ? String(pinCell.v).trim() : "";
 
-              const ref = db.collection("admin_users").doc(uid);
-              batch.set(ref, { 
-                pin: upin, 
-                canUploadPayroll: parseBool(uploadPayrollCell), 
+              // REJECT RULE: Either A or B is blank
+              if (!uid || !upin) {
+                return reject(new Error(`Row ${rowNum}: Both User ID (Col A) and PIN (Col B) are required.`));
+              }
+
+              // REJECT RULE: PIN is not exactly 6 digits
+              if (!/^\d{6}$/.test(upin)) {
+                return reject(new Error(`Row ${rowNum}: PIN for ID '${uid}' must be exactly 6 digits (got '${upin}').`));
+              }
+
+              parsedUsers.push({
+                uid: uid,
+                pin: upin,
+                canUploadPayroll: parseBool(uploadPayrollCell),
                 canOverride: parseBool(overrideCell),
                 canUploadUsers: parseBool(uploadUsersCell)
               });
-              count++;
             }
 
+            if (parsedUsers.length === 0) {
+              return reject(new Error("The uploaded Excel file contains no user data."));
+            }
+
+            // Save to Database
+            const batch = db.batch();
+            parsedUsers.forEach(u => {
+              const ref = db.collection("admin_users").doc(u.uid);
+              batch.set(ref, {
+                pin: u.pin,
+                canUploadPayroll: u.canUploadPayroll,
+                canOverride: u.canOverride,
+                canUploadUsers: u.canUploadUsers
+              });
+            });
+
             await batch.commit();
-            resolve(count);
+            resolve(parsedUsers.length);
           } catch (err) {
             reject(err);
           }
@@ -462,7 +493,7 @@
         alert(`Successfully uploaded ${count} users!`);
         loadUsersList();
       } catch(e) {
-        alert("Upload error: " + e.message);
+        alert("UPLOAD REJECTED: " + e.message);
       }
     }
 
@@ -647,14 +678,14 @@
         return;
       }
 
-      statusDiv.innerText = "Processing User excel records...";
+      statusDiv.innerText = "Validating and uploading user records...";
       try {
-        const count = await processUsersExcel(fileInput.files[0], statusDiv);
+        const count = await processUsersExcel(fileInput.files[0]);
         statusDiv.style.color = "green";
         statusDiv.innerText = `SUCCESS: Added/Updated ${count} Admin Users.`;
       } catch (err) {
         statusDiv.style.color = "red";
-        statusDiv.innerText = `Error: ${err.message}`;
+        statusDiv.innerText = `REJECTED: ${err.message}`;
       }
     }
 
