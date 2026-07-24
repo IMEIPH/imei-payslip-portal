@@ -13,24 +13,28 @@
     .input-group { margin-bottom: 15px; }
     label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 14px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; background: #fff; }
-    button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+    
+    /* DATE GRID LAYOUT */
+    .date-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+    
+    button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     button:hover { background: #2b6cb0; }
     
     /* PAYSLIP DISPLAY STYLES */
     .payslip-box { display: none; margin-top: 25px; border: 1px solid #cbd5e0; border-radius: 8px; padding: 25px; background: #fff; }
     
-    /* 1. TOP TITLE: A1, A2, A3, A4 */
+    /* TOP TITLE: A1, A2, A3, A4 */
     .payslip-title { text-align: center; border-bottom: 2px dashed #cbd5e0; padding-bottom: 15px; margin-bottom: 20px; }
     .payslip-title h2 { margin: 0 0 5px 0; color: #1a202c; text-transform: uppercase; font-size: 20px; }
     .payslip-title h3 { margin: 0 0 5px 0; color: #4a5568; text-transform: uppercase; font-size: 16px; }
     .payslip-title p { margin: 3px 0; color: #2d3748; font-weight: bold; font-size: 14px; text-transform: uppercase; }
     
-    /* 2. EMPLOYEE DETAILS: F, G */
+    /* EMPLOYEE DETAILS: F, G */
     .employee-info { border-bottom: 2px dashed #cbd5e0; padding-bottom: 15px; margin-bottom: 20px; }
     .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; text-transform: uppercase; }
     .info-row strong { color: #4a5568; }
 
-    /* 3. PAYSLIP BREAKDOWN (ALL CAPS) */
+    /* PAYSLIP BREAKDOWN (ALL CAPS) */
     .section-header { background: #edf2f7; padding: 8px 10px; font-weight: bold; color: #2d3748; text-transform: uppercase; margin-top: 15px; border-radius: 4px; font-size: 14px; }
     .table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 15px; }
     .table td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; font-size: 13px; text-transform: uppercase; }
@@ -52,7 +56,7 @@
       
       <div class="input-group">
         <label>EMPLOYEE ID NUMBER</label>
-        <input type="text" id="empId" placeholder="ENTER ID NUMBER" onchange="loadAvailableDates()">
+        <input type="text" id="empId" placeholder="ENTER ID NUMBER">
       </div>
       
       <div class="input-group">
@@ -60,11 +64,28 @@
         <input type="password" id="pin" placeholder="ENTER 6-DIGIT PIN">
       </div>
 
+      <!-- NEW PAYROLL DATE SEARCH SECTION -->
       <div class="input-group">
-        <label>SELECT PAYROLL DATE / PERIOD</label>
-        <select id="payrollDateSelect">
-          <option value="">-- SELECT UPLOADED PAYROLL DATE --</option>
-        </select>
+        <label>PAYROLL DATE</label>
+        <div class="date-grid">
+          <select id="pMonth">
+            <option value="">SELECT MONTH</option>
+            <option value="JANUARY">JANUARY</option>
+            <option value="FEBRUARY">FEBRUARY</option>
+            <option value="MARCH">MARCH</option>
+            <option value="APRIL">APRIL</option>
+            <option value="MAY">MAY</option>
+            <option value="JUNE">JUNE</option>
+            <option value="JULY">JULY</option>
+            <option value="AUGUST">AUGUST</option>
+            <option value="SEPTEMBER">SEPTEMBER</option>
+            <option value="OCTOBER">OCTOBER</option>
+            <option value="NOVEMBER">NOVEMBER</option>
+            <option value="DECEMBER">DECEMBER</option>
+          </select>
+          <input type="number" id="pDay" placeholder="DAY (e.g. 15)" min="1" max="31">
+          <input type="number" id="pYear" placeholder="YEAR (e.g. 2026)">
+        </div>
       </div>
 
       <button onclick="viewPayslip()">VIEW PAYSLIP</button>
@@ -160,40 +181,28 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Populate payroll dates dropdown from uploaded batches
-    async function loadAvailableDates() {
-      const dateSelect = document.getElementById("payrollDateSelect");
-      dateSelect.innerHTML = '<option value="">-- SELECT UPLOADED PAYROLL DATE --</option>';
-
-      try {
-        const snapshot = await db.collection("uploaded_payrolls").get();
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const option = document.createElement("option");
-          option.value = data.payrollDate;
-          option.innerText = `${data.payrollDate} (${data.payrollPeriod})`;
-          dateSelect.appendChild(option);
-        });
-      } catch (e) {
-        console.error("Error loading dates:", e);
-      }
-    }
-
-    // Automatically load dates on page load
-    window.onload = loadAvailableDates;
-
     async function viewPayslip() {
       const empId = document.getElementById("empId").value.trim().toUpperCase();
       const pin = document.getElementById("pin").value.trim();
-      const selectedDate = document.getElementById("payrollDateSelect").value;
+      
+      const month = document.getElementById("pMonth").value;
+      const day = document.getElementById("pDay").value.trim();
+      const year = document.getElementById("pYear").value.trim();
+
       const errorMsg = document.getElementById("errorMsg");
       const box = document.getElementById("payslipBox");
 
       errorMsg.style.display = "none";
       box.style.display = "none";
 
-      if(!empId || !pin || !selectedDate) {
-        errorMsg.innerText = "PLEASE ENTER ID, PIN, AND SELECT A PAYROLL DATE.";
+      if(!empId || !pin) {
+        errorMsg.innerText = "PLEASE ENTER BOTH EMPLOYEE ID AND PIN.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      if(!month || !day || !year) {
+        errorMsg.innerText = "PLEASE SELECT MONTH, AND TYPE BOTH DAY AND YEAR.";
         errorMsg.style.display = "block";
         return;
       }
@@ -206,19 +215,36 @@
         return;
       }
 
-      // 2. Fetch specific payslip matching ID and selected Payroll Date
-      const query = await db.collection("payslips")
+      // 2. Query payslips for this employee
+      const snapshot = await db.collection("payslips")
         .where("empId", "==", empId)
-        .where("payrollDate", "==", selectedDate)
         .get();
 
-      if(query.empty) {
-        errorMsg.innerText = "NO PAYSLIP RECORD FOUND FOR THIS ID AND DATE.";
+      if(snapshot.empty) {
+        errorMsg.innerText = "NO PAYSLIP RECORDS FOUND FOR THIS EMPLOYEE ID.";
         errorMsg.style.display = "block";
         return;
       }
 
-      const p = query.docs[0].data();
+      // 3. Filter results locally to flexibly match the requested Month, Day, and Year inside cell A3
+      let matchedPayslip = null;
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const pDateStr = String(data.payrollDate || "").toUpperCase();
+
+        // Check if payrollDate contains the chosen month, day, and year
+        if (pDateStr.includes(month) && pDateStr.includes(day) && pDateStr.includes(year)) {
+          matchedPayslip = data;
+        }
+      });
+
+      if(!matchedPayslip) {
+        errorMsg.innerText = `NO PAYSLIP FOUND FOR ${month} ${day}, ${year}. PLEASE CHECK THE DATE.`;
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      const p = matchedPayslip;
 
       // Top Title: A1, A2, A3, A4
       document.getElementById("pA1").innerText = p.company || "";
