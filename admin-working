@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - Employee & Payroll Management</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f7fafc; padding: 20px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 900px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    
+    .input-group { margin-bottom: 15px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 14px; }
+    input { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; background: #fff; }
+    
+    button { padding: 10px 16px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #2b6cb0; }
+    .btn-danger { background: #e53e3e; }
+    .btn-danger:hover { background: #c53030; }
+    .btn-success { background: #38a169; }
+    .btn-success:hover { background: #2f855a; }
+    .btn-warning { background: #dd6b20; }
+    .btn-warning:hover { background: #c05621; }
+    .btn-dark { background: #4a5568; }
+    .btn-dark:hover { background: #2d3748; }
+
+    /* LOGIN BOX */
+    #loginCard { max-width: 400px; margin: 50px auto; }
+
+    /* MAIN DASHBOARD */
+    #adminDashboard { display: none; }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px; }
+    
+    .section-title { background: #edf2f7; padding: 10px; font-weight: bold; color: #2d3748; border-radius: 6px; margin-top: 25px; margin-bottom: 15px; font-size: 15px; text-transform: uppercase; }
+
+    /* EXCEL ACTION TOOLBAR */
+    .excel-toolbar { background: #ebf8ff; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 12px; }
+    .excel-toolbar-header strong { color: #2b6cb0; display: block; font-size: 16px; }
+    .excel-toolbar-header span { font-size: 12px; color: #4a5568; }
+    .excel-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* VISUAL UPLOAD PROGRESS BOX */
+    #uploadProgressContainer { display: none; background: #fffaf0; border: 1px solid #fbd38d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    progress { width: 100%; height: 20px; margin-top: 10px; }
+
+    /* TABLE STYLES */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background: #f7fafc; text-align: left; padding: 10px; border-bottom: 2px solid #e2e8f0; font-size: 13px; color: #4a5568; }
+    td { padding: 10px; border-bottom: 1px solid #edf2f7; font-size: 14px; }
+    
+    .search-box { margin-bottom: 15px; }
+    .pin-badge { font-family: monospace; font-weight: bold; background: #edf2f7; padding: 4px 8px; border-radius: 4px; letter-spacing: 1px; }
+    .type-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+    .type-pin { background: #feebc8; color: #c05621; }
+
+    /* MODAL OVERLAY */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  </style>
+
+  <!-- FIREBASE (APP, AUTH, FIRESTORE) & SHEETJS LIBRARIES -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- ADMIN LOGIN CARD -->
+  <div id="loginCard" class="container">
+    <h2 style="text-align: center; margin-top: 0;">ADMIN LOGIN</h2>
+    <div class="input-group">
+      <label>ADMIN EMAIL</label>
+      <input type="email" id="adminEmail" placeholder="admin@company.com">
+    </div>
+    <div class="input-group">
+      <label>PASSWORD</label>
+      <input type="password" id="adminPass" placeholder="ENTER PASSWORD">
+    </div>
+    <button style="width: 100%;" onclick="loginAdmin()">LOGIN</button>
+    <div id="loginErr" style="color: red; font-weight: bold; margin-top: 10px; text-align: center;"></div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="adminDashboard" class="container">
+    <div class="dashboard-header">
+      <h2>PAYSLIP ADMIN PORTAL</h2>
+      <button class="btn-danger" onclick="logoutAdmin()">LOGOUT</button>
+    </div>
+
+    <!-- EXCEL BULK OPERATIONS TOOLBAR -->
+    <div class="excel-toolbar">
+      <div class="excel-toolbar-header">
+        <strong>BULK EXCEL OPERATIONS</strong>
+        <span>Manage Credentials (IDs & PINs) or Upload Payroll Payslip Data (.xlsx)</span>
+      </div>
+      <div class="excel-actions">
+        <!-- Hidden File Inputs -->
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleFileSelected()">
+        <input type="file" id="payrollFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handlePayrollFileSelected()">
+        
+        <button class="btn-success" onclick="triggerExcelUpload()">UPLOAD EMPLOYEES (ID & PIN)</button>
+        <button class="btn-warning" onclick="triggerPayrollUpload()">UPLOAD PAYROLL DATA (EXCEL)</button>
+        <button class="btn-dark" onclick="downloadEmployeeExcel()">DOWNLOAD ALL PINs</button>
+      </div>
+    </div>
+
+    <!-- REAL-TIME UPLOAD PROGRESS BAR UI -->
+    <div id="uploadProgressContainer">
+      <strong id="uploadStatusText" style="color: #dd6b20;">Processing Excel file...</strong>
+      <progress id="uploadProgressBar" value="0" max="100"></progress>
+    </div>
+
+    <!-- GLOBAL SEARCH BAR -->
+    <div class="search-box">
+      <label>SEARCH ALL RECORDS</label>
+      <input type="text" id="searchInput" placeholder="Search Employee ID or Name across all lists..." onkeyup="filterAllTables()">
+    </div>
+
+    <!-- PENDING PIN CHANGE REQUESTS -->
+    <div class="section-title">Pending PIN Change Requests</div>
+    <div id="pendingContainer">
+      <table id="pendingTable">
+        <thead>
+          <tr>
+            <th>EMPLOYEE ID</th>
+            <th>REQUEST TYPE</th>
+            <th>REQUESTED PIN</th>
+            <th style="text-align: right;">ACTION</th>
+          </tr>
+        </thead>
+        <tbody id="pendingBody">
+          <tr><td colspan="4" style="text-align: center;">Loading requests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- EMPLOYEE LIST & PIN MANAGEMENT -->
+    <div class="section-title">Registered Employees & PIN Management</div>
+    <table>
+      <thead>
+        <tr>
+          <th>EMPLOYEE ID</th>
+          <th>NAME</th>
+          <th>CURRENT PIN</th>
+          <th style="text-align: right;">ACTION</th>
+        </tr>
+      </thead>
+      <tbody id="employeeBody">
+        <tr><td colspan="4" style="text-align: center;">Loading employees...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MANUAL EDIT PIN MODAL -->
+  <div id="editPinModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>CHANGE EMPLOYEE PIN</h3>
+      <p id="targetEmpText" style="font-weight: bold; color: #2b6cb0;"></p>
+      <div class="input-group">
+        <label>NEW PIN</label>
+        <input type="text" id="newPinInput" placeholder="ENTER NEW PIN" maxlength="6">
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="closePinModal()" style="background: #a0aec0;">CANCEL</button>
+        <button class="btn-success" onclick="saveNewPin()">SAVE PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
+      authDomain: "payslip-portal-328ef.firebaseapp.com",
+      projectId: "payslip-portal-328ef",
+      storageBucket: "payslip-portal-328ef.firebasestorage.app",
+      messagingSenderId: "552626296645",
+      appId: "1:552626296645:web:4810a048e188512927d02c",
+      measurementId: "G-D8SZDV2CTP"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    let allPendingRequests = [];
+    let allEmployees = [];
+    let currentEditEmpId = null;
+
+    /* Clean commas, currency signs, and spaces before parsing float */
+    function parseExcelNum(val) {
+      if (val === null || val === undefined || val === '') return 0;
+      const cleaned = String(val).replace(/[^0-9.-]/g, '');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+
+    /* Helper function to safely read exact Excel cell coordinates */
+    function getCellValue(worksheet, colLetter, rowNumber) {
+      const cellAddress = colLetter.toUpperCase() + rowNumber;
+      const cell = worksheet[cellAddress];
+      return cell ? cell.v : null;
+    }
+
+    /* AUTO AUTH CHECK */
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("loginCard").style.display = "none";
+        document.getElementById("adminDashboard").style.display = "block";
+        loadPendingRequests();
+        loadEmployees();
+      } else {
+        document.getElementById("loginCard").style.display = "block";
+        document.getElementById("adminDashboard").style.display = "none";
+      }
+    });
+
+    // 1. FIREBASE AUTH LOGIN
+    async function loginAdmin() {
+      const email = document.getElementById("adminEmail").value.trim();
+      const pass = document.getElementById("adminPass").value.trim();
+      const err = document.getElementById("loginErr");
+      err.innerText = "";
+
+      try {
+        await auth.signInWithEmailAndPassword(email, pass);
+      } catch (error) {
+        console.error(error);
+        err.innerText = "ACCESS DENIED: " + error.message;
+      }
+    }
+
+    function logoutAdmin() {
+      auth.signOut().then(() => {
+        document.getElementById("adminEmail").value = "";
+        document.getElementById("adminPass").value = "";
+      });
+    }
+
+    // 2. DOWNLOAD ID & PIN EXCEL
+    async function downloadEmployeeExcel() {
+      try {
+        const excelData = [["ID", "PIN"]];
+
+        const snapshot = await db.collection("employees").get();
+        snapshot.forEach(doc => {
+          const empId = doc.id;
+          const data = doc.data();
+          let pin = String(data.pin || "");
+          
+          if (pin.length > 0 && pin.length < 6 && /^\d+$/.test(pin)) {
+            pin = pin.padStart(6, '0');
+          }
+          excelData.push([empId, pin]);
+        });
+
+        if (excelData.length <= 1) {
+          alert("No employee records found in database.");
+          return;
+        }
+
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Employee List");
+
+        XLSX.writeFile(workbook, "Employee_IDs_and_PINs.xlsx");
+
+      } catch (err) {
+        console.error(err);
+        alert("Error generating Excel file: " + err.message);
+      }
+    }
+
+    // 3. UPLOAD EMPLOYEE CREDENTIALS (ID & PIN)
+    function triggerExcelUpload() {
+      document.getElementById("excelFileInput").click();
+    }
+
+    async function handleFileSelected() {
+      const fileInput = document.getElementById("excelFileInput");
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const progressContainer = document.getElementById("uploadProgressContainer");
+      const statusText = document.getElementById("uploadStatusText");
+      const progressBar = document.getElementById("uploadProgressBar");
+
+      progressContainer.style.display = "block";
+      statusText.innerText = "Reading Excel file...";
+      progressBar.value = 10;
+
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array', raw: true });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+
+          if (rows.length === 0) {
+            alert("The uploaded file is empty.");
+            progressContainer.style.display = "none";
+            fileInput.value = "";
+            return;
+          }
+
+          let startIndex = 0;
+          if (rows[0] && rows[0].length >= 2) {
+            const colA = String(rows[0][0] || "").toUpperCase();
+            const colB = String(rows[0][1] || "").toUpperCase();
+            if (colA.includes("ID") || colB.includes("PIN")) {
+              startIndex = 1;
+            }
+          }
+
+          const totalRows = rows.length - startIndex;
+          let batch = db.batch();
+          let count = 0;
+          let totalUploaded = 0;
+
+          for (let i = startIndex; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            const rawId = String(row[0] || "").trim();
+            let rawPin = String(row[1] || "").trim();
+
+            if (!rawId) continue;
+
+            const empId = rawId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            if (rawPin.length > 0 && rawPin.length < 6 && /^\d+$/.test(rawPin)) {
+              rawPin = rawPin.padStart(6, '0');
+            }
+
+            if (!empId || !rawPin) continue;
+
+            const docRef = db.collection("employees").doc(empId);
+            batch.set(docRef, {
+              empId: empId,
+              pin: String(rawPin),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            count++;
+            totalUploaded++;
+
+            progressBar.value = Math.round((totalUploaded / totalRows) * 100);
+            statusText.innerText = `Uploading Employee Credentials... (${totalUploaded}/${totalRows})`;
+
+            if (count === 400) {
+              await batch.commit();
+              batch = db.batch();
+              count = 0;
+            }
+          }
+
+          if (count > 0) {
+            await batch.commit();
+          }
+
+          progressBar.value = 100;
+          statusText.innerText = `SUCCESS! Uploaded ${totalUploaded} employee record(s).`;
+          alert(`SUCCESS: Uploaded ${totalUploaded} employee record(s)!`);
+          
+          setTimeout(() => progressContainer.style.display = "none", 3000);
+          fileInput.value = "";
+
+        } catch (err) {
+          console.error(err);
+          alert("Error parsing file: " + err.message);
+          progressContainer.style.display = "none";
+          fileInput.value = "";
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // 4. UPLOAD PAYROLL DATA DIRECTLY FROM CELL COORDINATES
+    function triggerPayrollUpload() {
+      document.getElementById("payrollFileInput").click();
+    }
+
+    async function handlePayrollFileSelected() {
+      const fileInput = document.getElementById("payrollFileInput");
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const progressContainer = document.getElementById("uploadProgressContainer");
+      const statusText = document.getElementById("uploadStatusText");
+      const progressBar = document.getElementById("uploadProgressBar");
+
+      progressContainer.style.display = "block";
+      statusText.innerText = "Parsing Payroll Spreadsheet...";
+      progressBar.value = 10;
+
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array', raw: true });
+          
+          // Select sheet named PAYROLL or fallback to first sheet
+          const sheetName = workbook.SheetNames.includes("PAYROLL") ? "PAYROLL" : workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+
+          // Determine worksheet range
+          const range = XLSX.utils.decode_range(worksheet['!ref']);
+          const totalRows = range.e.r + 1; // 1-based index total rows
+
+          let batch = db.batch();
+          let count = 0;
+          let totalUploaded = 0;
+
+          // Start reading from row 8 (where row 8 is 1-based index in Excel)
+          for (let r = 8; r <= totalRows; r++) {
+            // Read Employee Name from Column G
+            const empName = String(getCellValue(worksheet, "G", r) || "").trim();
+            if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
+
+            // Read ID Number or Match Number
+            const rawId = String(getCellValue(worksheet, "A", r) || "").trim();
+            if (!rawId) continue;
+
+            const empId = rawId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+            // DIRECTLY MAP COLUMNS USING EXACT EXCEL COLUMN LETTERS:
+            const payslipPayload = {
+              empId: empId,
+              empName: empName,
+              
+              // REGULAR DAYS (Column AQ = Days, Column AS = Exact Amount 5940.00)
+              regularDays: parseExcelNum(getCellValue(worksheet, "AQ", r)),
+              regularDaysAmount: parseExcelNum(getCellValue(worksheet, "AS", r)),
+              
+              // REGULAR OT (AT & AU)
+              regularOtHours: parseExcelNum(getCellValue(worksheet, "AT", r)),
+              regularOtAmount: parseExcelNum(getCellValue(worksheet, "AU", r)),
+              
+              // NIGHT DIFFERENTIAL (AV & AW)
+              nightDiffHours: parseExcelNum(getCellValue(worksheet, "AV", r)),
+              nightDiffAmount: parseExcelNum(getCellValue(worksheet, "AW", r)),
+              
+              // REGULAR OT NP (AX & AY)
+              regularOtNpHours: parseExcelNum(getCellValue(worksheet, "AX", r)),
+              regularOtNpAmount: parseExcelNum(getCellValue(worksheet, "AY", r)),
+              
+              // LEAVE WITH PAY (AZ & BA)
+              leaveWithPayDays: parseExcelNum(getCellValue(worksheet, "AZ", r)),
+              leaveWithPayAmount: parseExcelNum(getCellValue(worksheet, "BA", r)),
+              
+              // GROSS PAY (BB)
+              grossPay: parseExcelNum(getCellValue(worksheet, "BB", r)),
+              
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            const docRef = db.collection("payslips").doc(empId);
+            batch.set(docRef, payslipPayload, { merge: true });
+
+            count++;
+            totalUploaded++;
+
+            progressBar.value = Math.round((r / totalRows) * 100);
+            statusText.innerText = `Uploading Payslips... (${totalUploaded} employees processed)`;
+
+            if (count === 400) {
+              await batch.commit();
+              batch = db.batch();
+              count = 0;
+            }
+          }
+
+          if (count > 0) {
+            await batch.commit();
+          }
+
+          progressBar.value = 100;
+          statusText.innerText = `SUCCESS! Updated ${totalUploaded} employee payslips.`;
+          alert(`SUCCESS: Uploaded ${totalUploaded} employee payslip records!`);
+          
+          setTimeout(() => progressContainer.style.display = "none", 3000);
+          fileInput.value = "";
+
+        } catch (err) {
+          console.error(err);
+          alert("Error uploading payroll data: " + err.message);
+          progressContainer.style.display = "none";
+          fileInput.value = "";
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // 5. LOAD PIN CHANGE REQUESTS
+    function loadPendingRequests() {
+      db.collection("registration_requests")
+        .onSnapshot(snapshot => {
+          allPendingRequests = [];
+          snapshot.forEach(doc => {
+            allPendingRequests.push({ reqId: doc.id, ...doc.data() });
+          });
+          renderPendingRequests(allPendingRequests);
+        });
+    }
+
+    function renderPendingRequests(list) {
+      const tbody = document.getElementById("pendingBody");
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #718096;">No pending PIN change requests.</td></tr>`;
+        return;
+      }
+
+      list.forEach(req => {
+        const empId = req.empId || req.reqId;
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td><strong>${empId}</strong></td>
+          <td><span class="type-badge type-pin">PIN CHANGE REQUEST</span></td>
+          <td><span class="pin-badge">${req.pin}</span></td>
+          <td style="text-align: right;">
+            <button class="btn-warning" onclick="grantPinChangeRequest('${empId}', '${req.pin}')">
+              GRANT PIN CHANGE REQUEST
+            </button>
+            <button class="btn-danger" onclick="rejectRequest('${empId}')">Reject</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function grantPinChangeRequest(empId, newPin) {
+      try {
+        await db.collection("employees").doc(empId).set({
+          pin: String(newPin),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        await db.collection("registration_requests").doc(empId).delete();
+        alert(`SUCCESS: PIN Change granted for ID ${empId}!`);
+      } catch (err) {
+        alert("Error granting PIN change: " + err.message);
+      }
+    }
+
+    async function rejectRequest(empId) {
+      if (confirm(`Reject PIN change request for ID ${empId}?`)) {
+        await db.collection("registration_requests").doc(empId).delete();
+      }
+    }
+
+    // 6. LOAD ALL REGISTERED EMPLOYEES
+    function loadEmployees() {
+      db.collection("employees").onSnapshot(snapshot => {
+        allEmployees = [];
+        snapshot.forEach(doc => {
+          allEmployees.push({ empId: doc.id, ...doc.data() });
+        });
+        renderEmployees(allEmployees);
+      });
+    }
+
+    function renderEmployees(list) {
+      const tbody = document.getElementById("employeeBody");
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #718096;">No employees found.</td></tr>`;
+        return;
+      }
+
+      list.forEach(emp => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${emp.empId}</strong></td>
+          <td>${emp.empName || "---"}</td>
+          <td><span class="pin-badge">${emp.pin || "NO PIN"}</span></td>
+          <td style="text-align: right;">
+            <button onclick="openPinModal('${emp.empId}', '${emp.pin || ""}')">Manual Edit PIN</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 7. GLOBAL SEARCH FILTER
+    function filterAllTables() {
+      const query = document.getElementById("searchInput").value.trim().toUpperCase();
+      
+      const filteredPending = allPendingRequests.filter(req => {
+        const id = (req.empId || req.reqId).toUpperCase();
+        return id.includes(query);
+      });
+
+      const filteredEmployees = allEmployees.filter(emp => {
+        const idMatch = emp.empId.toUpperCase().includes(query);
+        const nameMatch = (emp.empName || "").toUpperCase().includes(query);
+        return idMatch || nameMatch;
+      });
+
+      renderPendingRequests(filteredPending);
+      renderEmployees(filteredEmployees);
+    }
+
+    // 8. MANUAL EDIT PIN MODAL LOGIC
+    function openPinModal(empId, currentPin) {
+      currentEditEmpId = empId;
+      document.getElementById("targetEmpText").innerText = `Employee ID: ${empId}`;
+      document.getElementById("newPinInput").value = currentPin;
+      document.getElementById("editPinModal").style.display = "flex";
+    }
+
+    function closePinModal() {
+      document.getElementById("editPinModal").style.display = "none";
+      currentEditEmpId = null;
+    }
+
+    async function saveNewPin() {
+      const newPin = document.getElementById("newPinInput").value.trim();
+      if (!newPin) {
+        alert("Please enter a valid PIN.");
+        return;
+      }
+
+      try {
+        await db.collection("employees").doc(currentEditEmpId).set({
+          pin: String(newPin)
+        }, { merge: true });
+        alert(`PIN updated successfully for ${currentEditEmpId}!`);
+        closePinModal();
+      } catch (err) {
+        alert("Error saving PIN: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
