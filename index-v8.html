@@ -13,6 +13,10 @@
     label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 14px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; background: #fff; }
     
+    .date-inputs { display: flex; gap: 8px; }
+    .date-inputs select { flex: 2; }
+    .date-inputs input { flex: 1; text-align: center; }
+
     button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; }
     button:hover { background: #2b6cb0; }
     .btn-secondary { background: #718096; margin-top: 10px; }
@@ -53,10 +57,33 @@
       <input type="password" id="pinInput" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
     </div>
 
-    <!-- RESTORED PAYROLL PERIOD / DATE SELECTION -->
+    <!-- MONTH DROPDOWN + DATE & YEAR INPUT BOXES -->
     <div class="input-group">
-      <label>PAYROLL PERIOD / DATE</label>
-      <input type="date" id="payrollDateInput">
+      <label>PAYROLL PERIOD DATE</label>
+      <div class="date-inputs">
+        <!-- Month Dropdown -->
+        <select id="monthSelect">
+          <option value="">Month</option>
+          <option value="01">January</option>
+          <option value="02">February</option>
+          <option value="03">March</option>
+          <option value="04">April</option>
+          <option value="05">May</option>
+          <option value="06">June</option>
+          <option value="07">July</option>
+          <option value="08">August</option>
+          <option value="09">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+
+        <!-- Date (Day) Input Box -->
+        <input type="number" id="dayInput" placeholder="Date (1-31)" min="1" max="31">
+
+        <!-- Year Input Box -->
+        <input type="number" id="yearInput" placeholder="Year (YYYY)" min="2000" max="2099">
+      </div>
     </div>
 
     <button onclick="viewPayslip()">VIEW PAYSLIP</button>
@@ -137,7 +164,11 @@
     async function viewPayslip() {
       const rawId = document.getElementById("empIdInput").value.trim();
       const pin = document.getElementById("pinInput").value.trim();
-      const selectedDate = document.getElementById("payrollDateInput").value;
+      
+      const month = document.getElementById("monthSelect").value;
+      let day = document.getElementById("dayInput").value.trim();
+      const year = document.getElementById("yearInput").value.trim();
+
       const err = document.getElementById("loginErr");
       err.innerText = "";
 
@@ -146,12 +177,18 @@
         return;
       }
 
-      if (!selectedDate) {
-        err.innerText = "Please select a Payroll Period / Date.";
+      if (!month || !day || !year) {
+        err.innerText = "Please complete Month, Date, and Year.";
         return;
       }
 
+      // Format Day with leading zero if needed (e.g., "5" becomes "05")
+      if (day.length === 1) {
+        day = '0' + day;
+      }
+
       const empId = rawId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const selectedDate = `${year}-${month}-${day}`; // Format YYYY-MM-DD
 
       try {
         // 1. Verify Credentials
@@ -168,28 +205,26 @@
           return;
         }
 
-        // 2. Fetch Payslip for the specified Date/Period OR fallback to latest matching ID
+        // 2. Query Payslips
         let querySnapshot = await db.collection("payslips")
           .where("empId", "==", empId)
           .where("payrollPeriod", "==", selectedDate)
           .get();
 
         if (querySnapshot.empty) {
-          // Fallback check if stored under composite document key [EMPID_DATE] or fallback doc
           const docDirect = await db.collection("payslips").doc(`${empId}_${selectedDate}`).get();
           if (docDirect.exists) {
             renderPayslip(docDirect.data(), selectedDate);
             return;
           }
 
-          // Fallback to primary ID document if period filtering is not strictly matched
           const docFallback = await db.collection("payslips").doc(empId).get();
           if (docFallback.exists) {
             renderPayslip(docFallback.data(), selectedDate);
             return;
           }
 
-          err.innerText = "No payslip record found for the selected Date / Period.";
+          err.innerText = `No payslip record found for ${selectedDate}.`;
           return;
         }
 
@@ -208,27 +243,21 @@
       document.getElementById("dispEmpName").innerText = data.empName || "EMPLOYEE";
       document.getElementById("dispPeriodDate").innerText = dateStr || data.payrollPeriod || "---";
 
-      // Regular Days (Mapped from AQ and AS)
       document.getElementById("dispRegDays").innerText = data.regularDays || 0;
       document.getElementById("dispRegDaysAmount").innerText = formatCurrency(data.regularDaysAmount);
 
-      // Regular OT
       document.getElementById("dispRegOtHours").innerText = data.regularOtHours || 0;
       document.getElementById("dispRegOtAmount").innerText = formatCurrency(data.regularOtAmount);
 
-      // Night Diff
       document.getElementById("dispNightDiffHours").innerText = data.nightDiffHours || 0;
       document.getElementById("dispNightDiffAmount").innerText = formatCurrency(data.nightDiffAmount);
 
-      // Regular OT NP
       document.getElementById("dispRegOtNpHours").innerText = data.regularOtNpHours || 0;
       document.getElementById("dispRegOtNpAmount").innerText = formatCurrency(data.regularOtNpAmount);
 
-      // Leave With Pay
       document.getElementById("dispLeaveDays").innerText = data.leaveWithPayDays || 0;
       document.getElementById("dispLeaveAmount").innerText = formatCurrency(data.leaveWithPayAmount);
 
-      // Gross Pay
       document.getElementById("dispGrossPay").innerText = formatCurrency(data.grossPay);
 
       document.getElementById("loginCard").style.display = "none";
@@ -238,7 +267,9 @@
     function logoutEmployee() {
       document.getElementById("empIdInput").value = "";
       document.getElementById("pinInput").value = "";
-      document.getElementById("payrollDateInput").value = "";
+      document.getElementById("monthSelect").value = "";
+      document.getElementById("dayInput").value = "";
+      document.getElementById("yearInput").value = "";
       document.getElementById("loginErr").innerText = "";
       document.getElementById("payslipCard").style.display = "none";
       document.getElementById("loginCard").style.display = "block";
