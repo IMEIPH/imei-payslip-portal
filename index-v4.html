@@ -492,22 +492,32 @@
         document.getElementById("pF").innerText = p.empId || "";
         document.getElementById("pG").innerText = p.empName || "";
 
-        /* REGULAR DAYS CALCULATION (AQ x AR -> AS) */
-        const aqVal = parseFloat(String(p.AQ || p.pAQ || p.regDaysCount || p["REGULAR DAYS"] || "0").replace(/,/g, '')) || 0;
-        const arRate = parseFloat(String(p.AR || p.pAR || p.dailyRate || p.AS || p.pAS || p.regDaysAmt || "0").replace(/,/g, '')) || 0;
+        /* REGULAR DAYS COMPUTATION (COLUMNS AQ, AR, AS) */
+        const aqRaw = p.AQ || p.pAQ || p.regDaysCount || p["REGULAR DAYS"] || "0";
+        const arRaw = p.AR || p.pAR || p.dailyRate || p["REGULAR DAYS_1"] || p["__EMPTY"] || "0";
+        
+        const aqVal = parseFloat(String(aqRaw).replace(/,/g, '')) || 0;
+        const arVal = parseFloat(String(arRaw).replace(/,/g, '')) || 0;
 
-        document.getElementById("pAQ").innerText = aqVal > 0 ? aqVal : (p.AQ || p.pAQ || "-");
+        /* Check all possible keys for Column AS (Direct & Merged) */
+        let asVal = 0;
+        const asRaw = p.AS || p.pAS || p.regDaysAmt || p.regularDaysAmt || p["REGULAR DAYS_2"] || p["__EMPTY_1"] || p["__EMPTY_2"];
 
-        if (aqVal > 0 && arRate > 0) {
-          const computedAS = aqVal * arRate;
-          document.getElementById("pAS").innerText = computedAS.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          });
-        } else {
-          /* Fallback if numbers can't be parsed */
-          document.getElementById("pAS").innerText = p.AS || p.pAS || p.regDaysAmt || "0.00";
+        if (asRaw !== undefined && asRaw !== null && asRaw !== "") {
+          asVal = parseFloat(String(asRaw).replace(/,/g, '')) || 0;
         }
+
+        /* Fallback: If Column AS is 0/missing, compute AQ * AR directly */
+        if (asVal === 0 && aqVal > 0 && arVal > 0) {
+          asVal = aqVal * arVal;
+        }
+
+        /* Update Table */
+        document.getElementById("pAQ").innerText = aqVal > 0 ? aqVal : (p.AQ || p.pAQ || "-");
+        document.getElementById("pAS").innerText = asVal.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
 
         /* Regular OT */
         document.getElementById("pAV").innerText = p.regOtCount || p.AV || "-";
