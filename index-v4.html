@@ -512,11 +512,29 @@
 
         /* 1. REGULAR DAYS (AQ = Days, AS = Amount) */
         const aqRaw = p.pAQ ?? p.AQ ?? p.regDaysCount ?? p["REGULAR DAYS"] ?? "0";
-        // Bypasses column AR (Rate: 540) by prioritizing pAS / AS / regDaysAmt and column AS header fallbacks (REGULAR DAYS_3 / __EMPTY_2)
-        const asRaw = p.pAS ?? p.AS ?? p.regDaysAmt ?? p["REGULAR DAYS_3"] ?? p["__EMPTY_2"] ?? p["REGULAR DAYS_2"] ?? p["__EMPTY_1"] ?? "0";
-
         const aqVal = parseFloat(String(aqRaw).replace(/,/g, '')) || 0;
-        const asVal = parseFloat(String(asRaw).replace(/,/g, '')) || 0;
+
+        // Try candidate keys for Column AS
+        const candidates = [
+          p["REGULAR DAYS_3"], p["REGULAR DAYS_2"], p["__EMPTY_2"], p.pAS, p.AS, p.regDaysAmt, p["__EMPTY_1"]
+        ];
+
+        let asVal = 0;
+        for (let cand of candidates) {
+          if (cand !== undefined && cand !== null && cand !== "") {
+            let parsed = parseFloat(String(cand).replace(/,/g, ''));
+            // Filter out the rate value 540 so it grabs the actual calculated total
+            if (!isNaN(parsed) && parsed !== 540 && parsed > 0) {
+              asVal = parsed;
+              break;
+            }
+          }
+        }
+
+        // Fallback: If still 0 or equal to 540, calculate total as Days * 540 rate
+        if (asVal === 0 && aqVal > 0) {
+          asVal = aqVal * 540;
+        }
 
         document.getElementById("pAQ").innerText = formatCount(aqVal);
         document.getElementById("pAS").innerText = formatVal(asVal);
