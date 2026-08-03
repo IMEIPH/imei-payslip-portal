@@ -71,7 +71,7 @@
     <h2 style="text-align: center; margin-top: 0;">ADMIN LOGIN</h2>
     <div class="input-group">
       <label>ADMIN EMAIL</label>
-      <input type="email" id="adminEmail" placeholder="admin@yourcompany.com">
+      <input type="email" id="adminEmail" placeholder="admin@company.com">
     </div>
     <div class="input-group">
       <label>PASSWORD</label>
@@ -195,6 +195,14 @@
         index = index * 26 + (str.charCodeAt(i) - 64);
       }
       return index - 1;
+    }
+
+    /* Clean commas, currency signs, and spaces before parsing float */
+    function parseExcelNum(val) {
+      if (val === null || val === undefined || val === '') return 0;
+      const cleaned = String(val).replace(/[^0-9.-]/g, '');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
     }
 
     /* AUTO AUTH CHECK: Persistence Listener */
@@ -431,23 +439,28 @@
               empId: empId,
               empName: empName,
               
-              // Column AS = Regular Days Amount
-              regularDays: parseFloat(row[colIndex("AR")] || 0),
-              regularDaysAmount: parseFloat(row[colIndex("AS")] || 0),
+              // REGULAR DAYS (Column AR = Count, Column AS = Amount)
+              regularDays: parseExcelNum(row[colIndex("AR")]),
+              regularDaysAmount: parseExcelNum(row[colIndex("AS")]),
               
-              regularOtHours: parseFloat(row[colIndex("AT")] || 0),
-              regularOtAmount: parseFloat(row[colIndex("AU")] || 0),
+              // REGULAR OT (AT & AU)
+              regularOtHours: parseExcelNum(row[colIndex("AT")]),
+              regularOtAmount: parseExcelNum(row[colIndex("AU")]),
               
-              nightDiffHours: parseFloat(row[colIndex("AV")] || 0),
-              nightDiffAmount: parseFloat(row[colIndex("AW")] || 0),
+              // NIGHT PREMIUM (AV & AW)
+              nightDiffHours: parseExcelNum(row[colIndex("AV")]),
+              nightDiffAmount: parseExcelNum(row[colIndex("AW")]),
               
-              regularOtNpHours: parseFloat(row[colIndex("AX")] || 0),
-              regularOtNpAmount: parseFloat(row[colIndex("AY")] || 0),
+              // REGULAR OT NP (AX & AY)
+              regularOtNpHours: parseExcelNum(row[colIndex("AX")]),
+              regularOtNpAmount: parseExcelNum(row[colIndex("AY")]),
               
-              leaveWithPayDays: parseFloat(row[colIndex("AZ")] || 0),
-              leaveWithPayAmount: parseFloat(row[colIndex("BA")] || 0),
+              // LEAVE WITH PAY (AZ & BA)
+              leaveWithPayDays: parseExcelNum(row[colIndex("AZ")]),
+              leaveWithPayAmount: parseExcelNum(row[colIndex("BA")]),
               
-              grossPay: parseFloat(row[colIndex("BB")] || 0),
+              // GROSS PAY (BB)
+              grossPay: parseExcelNum(row[colIndex("BB")]),
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
