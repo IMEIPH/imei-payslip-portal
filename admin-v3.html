@@ -1,0 +1,81 @@
+/* ================= ADMIN RENDER FUNCTION ================= */
+function renderRequestsTable(snapshot, filterText = "") {
+  const tableBody = document.getElementById("requestsTableBody"); // Your admin table body ID
+  tableBody.innerHTML = "";
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const empId = String(data.empId || doc.id).toUpperCase();
+    const pin = String(data.pin || "");
+    const requestType = data.requestType || "NEW_REGISTRATION";
+
+    /* Search Bar Filter Support */
+    if (filterText && !empId.includes(filterText.toUpperCase())) {
+      return; // Skip if it doesn't match search bar
+    }
+
+    /* Row Construction */
+    const tr = document.createElement("tr");
+
+    if (requestType === "PIN_CHANGE") {
+      tr.innerHTML = `
+        <td><strong>${empId}</strong></td>
+        <td><span style="background: #feebc8; color: #c05621; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">PIN CHANGE REQUEST</span></td>
+        <td><strong>Requested PIN: ${pin}</strong></td>
+        <td>
+          <button style="background: #dd6b20; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;" 
+                  onclick="grantPinChangeRequest('${empId}', '${pin}')">
+            GRANT PIN CHANGE REQUEST
+          </button>
+        </td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td><strong>${empId}</strong></td>
+        <td><span style="background: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">NEW REGISTRATION</span></td>
+        <td>Requested PIN: ${pin}</td>
+        <td>
+          <button style="background: #38a169; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;" 
+                  onclick="approveNewRegistration('${empId}', '${pin}')">
+            APPROVE ID
+          </button>
+        </td>
+      `;
+    }
+
+    tableBody.appendChild(tr);
+  });
+}
+
+/* ================= GRANT PIN CHANGE REQUEST FUNCTION ================= */
+async function grantPinChangeRequest(empId, newPin) {
+  /* Master Password Prompt */
+  const masterIdInput = prompt("ENTER MASTER ADMIN ID:");
+  if (!masterIdInput || masterIdInput.trim().toUpperCase() !== "IS058") {
+    alert("ACCESS DENIED: INVALID MASTER ID.");
+    return;
+  }
+
+  const masterPinInput = prompt("ENTER MASTER PIN:");
+  if (masterPinInput !== "101992") {
+    alert("ACCESS DENIED: INCORRECT MASTER PIN.");
+    return;
+  }
+
+  try {
+    /* Update employee document in Firestore */
+    await db.collection("employees").doc(empId).update({
+      pin: String(newPin),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    /* Delete from requests collection */
+    await db.collection("registration_requests").doc(empId).delete();
+
+    alert(`SUCCESS: PIN Change granted for ID ${empId}.`);
+
+  } catch (err) {
+    console.error("Error granting PIN change:", err);
+    alert("Error: " + err.message);
+  }
+}
