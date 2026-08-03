@@ -492,10 +492,23 @@
         document.getElementById("pF").innerText = p.empId || "";
         document.getElementById("pG").innerText = p.empName || "";
 
-        /* Regular Working Days (Column AQ & Column AS) */
-        document.getElementById("pAQ").innerText = p.AQ || p.pAQ || p.regDaysCount || p["REGULAR DAYS"] || "-";
-        document.getElementById("pAS").innerText = p.AS || p.pAS || p.regDaysAmt || p.regularDaysAmt || p["REGULAR DAYS AMOUNT"] || p["REGULAR DAYS AMT"] || "0.00";
-        
+        /* REGULAR DAYS CALCULATION (AQ x AR -> AS) */
+        const aqVal = parseFloat(String(p.AQ || p.pAQ || p.regDaysCount || p["REGULAR DAYS"] || "0").replace(/,/g, '')) || 0;
+        const arRate = parseFloat(String(p.AR || p.pAR || p.dailyRate || p.AS || p.pAS || p.regDaysAmt || "0").replace(/,/g, '')) || 0;
+
+        document.getElementById("pAQ").innerText = aqVal > 0 ? aqVal : (p.AQ || p.pAQ || "-");
+
+        if (aqVal > 0 && arRate > 0) {
+          const computedAS = aqVal * arRate;
+          document.getElementById("pAS").innerText = computedAS.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        } else {
+          /* Fallback if numbers can't be parsed */
+          document.getElementById("pAS").innerText = p.AS || p.pAS || p.regDaysAmt || "0.00";
+        }
+
         /* Regular OT */
         document.getElementById("pAV").innerText = p.regOtCount || p.AV || "-";
         document.getElementById("pAW").innerText = p.regOtAmt || p.AW || "0.00";
