@@ -187,16 +187,6 @@
     let allEmployees = [];
     let currentEditEmpId = null;
 
-    /* Excel Column Letter to 0-based Array Index */
-    function colIndex(colLetter) {
-      let index = 0;
-      const str = colLetter.toUpperCase();
-      for (let i = 0; i < str.length; i++) {
-        index = index * 26 + (str.charCodeAt(i) - 64);
-      }
-      return index - 1;
-    }
-
     /* Clean commas, currency signs, and spaces before parsing float */
     function parseExcelNum(val) {
       if (val === null || val === undefined || val === '') return 0;
@@ -205,7 +195,14 @@
       return isNaN(parsed) ? 0 : parsed;
     }
 
-    /* AUTO AUTH CHECK: Persistence Listener */
+    /* Helper function to safely read exact Excel cell coordinates */
+    function getCellValue(worksheet, colLetter, rowNumber) {
+      const cellAddress = colLetter.toUpperCase() + rowNumber;
+      const cell = worksheet[cellAddress];
+      return cell ? cell.v : null;
+    }
+
+    /* AUTO AUTH CHECK */
     auth.onAuthStateChanged(user => {
       if (user) {
         document.getElementById("loginCard").style.display = "none";
@@ -380,7 +377,7 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // 4. UPLOAD PAYROLL DATA (Column AQ = Days, Column AS = Amount)
+    // 4. UPLOAD PAYROLL DATA DIRECTLY FROM CELL COORDINATES
     function triggerPayrollUpload() {
       document.getElementById("payrollFileInput").click();
     }
@@ -403,64 +400,59 @@
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array', raw: true });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          
+          // Select sheet named PAYROLL or fallback to first sheet
+          const sheetName = workbook.SheetNames.includes("PAYROLL") ? "PAYROLL" : workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
 
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-
-          if (rows.length === 0) {
-            alert("The uploaded Payroll Excel file is empty.");
-            progressContainer.style.display = "none";
-            fileInput.value = "";
-            return;
-          }
+          // Determine worksheet range
+          const range = XLSX.utils.decode_range(worksheet['!ref']);
+          const totalRows = range.e.r + 1; // 1-based index total rows
 
           let batch = db.batch();
           let count = 0;
           let totalUploaded = 0;
 
-          let startIndex = 0;
-          if (rows[0] && String(rows[0][0] || "").toLowerCase().includes("id")) {
-            startIndex = 1;
-          }
+          // Start reading from row 8 (where row 8 is 1-based index in Excel)
+          for (let r = 8; r <= totalRows; r++) {
+            // Read Employee Name from Column G
+            const empName = String(getCellValue(worksheet, "G", r) || "").trim();
+            if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
 
-          const totalRows = rows.length - startIndex;
-
-          for (let i = startIndex; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length === 0) continue;
-
-            const rawId = String(row[colIndex("A")] || "").trim();
+            // Read ID Number or Match Number
+            const rawId = String(getCellValue(worksheet, "A", r) || "").trim();
             if (!rawId) continue;
 
             const empId = rawId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            const empName = String(row[colIndex("B")] || "").trim();
 
+            // DIRECTLY MAP COLUMNS USING EXACT EXCEL COLUMN LETTERS:
             const payslipPayload = {
               empId: empId,
               empName: empName,
               
-              // REGULAR DAYS (Column AQ = Count, Column AS = Amount)
-              regularDays: parseExcelNum(row[colIndex("AQ")]),
-              regularDaysAmount: parseExcelNum(row[colIndex("AS")]),
+              // REGULAR DAYS (Column AQ = Days, Column AS = Exact Amount 5940.00)
+              regularDays: parseExcelNum(getCellValue(worksheet, "AQ", r)),
+              regularDaysAmount: parseExcelNum(getCellValue(worksheet, "AS", r)),
               
               // REGULAR OT (AT & AU)
-              regularOtHours: parseExcelNum(row[colIndex("AT")]),
-              regularOtAmount: parseExcelNum(row[colIndex("AU")]),
+              regularOtHours: parseExcelNum(getCellValue(worksheet, "AT", r)),
+              regularOtAmount: parseExcelNum(getCellValue(worksheet, "AU", r)),
               
-              // NIGHT PREMIUM (AV & AW)
-              nightDiffHours: parseExcelNum(row[colIndex("AV")]),
-              nightDiffAmount: parseExcelNum(row[colIndex("AW")]),
+              // NIGHT DIFFERENTIAL (AV & AW)
+              nightDiffHours: parseExcelNum(getCellValue(worksheet, "AV", r)),
+              nightDiffAmount: parseExcelNum(getCellValue(worksheet, "AW", r)),
               
               // REGULAR OT NP (AX & AY)
-              regularOtNpHours: parseExcelNum(row[colIndex("AX")]),
-              regularOtNpAmount: parseExcelNum(row[colIndex("AY")]),
+              regularOtNpHours: parseExcelNum(getCellValue(worksheet, "AX", r)),
+              regularOtNpAmount: parseExcelNum(getCellValue(worksheet, "AY", r)),
               
               // LEAVE WITH PAY (AZ & BA)
-              leaveWithPayDays: parseExcelNum(row[colIndex("AZ")]),
-              leaveWithPayAmount: parseExcelNum(row[colIndex("BA")]),
+              leaveWithPayDays: parseExcelNum(getCellValue(worksheet, "AZ", r)),
+              leaveWithPayAmount: parseExcelNum(getCellValue(worksheet, "BA", r)),
               
               // GROSS PAY (BB)
-              grossPay: parseExcelNum(row[colIndex("BB")]),
+              grossPay: parseExcelNum(getCellValue(worksheet, "BB", r)),
+              
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -470,8 +462,8 @@
             count++;
             totalUploaded++;
 
-            progressBar.value = Math.round((totalUploaded / totalRows) * 100);
-            statusText.innerText = `Uploading Payslips... (${totalUploaded}/${totalRows})`;
+            progressBar.value = Math.round((r / totalRows) * 100);
+            statusText.innerText = `Uploading Payslips... (${totalUploaded} employees processed)`;
 
             if (count === 400) {
               await batch.commit();
