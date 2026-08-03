@@ -245,9 +245,17 @@
         </thead>
         <tbody>
           <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAS">0.00</td></tr>
-          <tr><td class="text-left">REGULAR OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
-          <tr><td class="text-left">NIGHT PREMIUM</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
-          <tr><td class="text-left">REGULAR OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
+          <tr><td class="text-left">REG OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
+          <tr><td class="text-left">NP</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
+          <tr><td class="text-left">REG OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
+          <tr><td class="text-left">REGULAR HOLIDAY PAY</td><td class="text-center" id="pBD">0</td><td class="amount" id="pBE">0.00</td></tr>
+          <tr><td class="text-left">REGULAR HOLIDAY DUTY</td><td class="text-center" id="pBF">0</td><td class="amount" id="pBG">0.00</td></tr>
+          <tr><td class="text-left">REGULAR HOLIDAY OT</td><td class="text-center" id="pBH">0</td><td class="amount" id="pBI">0.00</td></tr>
+          <tr><td class="text-left">REGULAR HOLIDAY NP</td><td class="text-center" id="pBJ">0</td><td class="amount" id="pBK">0.00</td></tr>
+          <tr><td class="text-left">SPECIAL HOLIDAY DUTY</td><td class="text-center" id="pBL">0</td><td class="amount" id="pBM">0.00</td></tr>
+          <tr><td class="text-left">SPECIAL HOLIDAY OT</td><td class="text-center" id="pBN">0</td><td class="amount" id="pBO">0.00</td></tr>
+          <tr><td class="text-left">SPECIAL HOLIDAY NP</td><td class="text-center" id="pBP">0</td><td class="amount" id="pBQ">0.00</td></tr>
+          <tr><td class="text-left">SPECIAL HOLIDAY OT NP</td><td class="text-center" id="pBR">0</td><td class="amount" id="pBS">0.00</td></tr>
           <tr><td class="text-left">REST DAY</td><td class="text-center" id="pBV">0</td><td class="amount" id="pBW">0.00</td></tr>
           <tr><td class="text-left">REST DAY OT</td><td class="text-center" id="pBX">0</td><td class="amount" id="pBY">0.00</td></tr>
           <tr><td class="text-left">REST DAY NP</td><td class="text-center" id="pBZ">0</td><td class="amount" id="pCA">0.00</td></tr>
@@ -418,6 +426,18 @@
       }
     }
 
+    /* Helper function to clean and format amounts safely */
+    function formatVal(val) {
+      if (val === undefined || val === null || val === "" || val === "-") return "0.00";
+      const num = parseFloat(String(val).replace(/,/g, ''));
+      return isNaN(num) ? "0.00" : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatCount(val) {
+      if (val === undefined || val === null || val === "" || val === "0") return "-";
+      return val;
+    }
+
     /* View Payslip Function */
     async function viewPayslip() {
       const rawEmpId = document.getElementById("empId").value.trim();
@@ -482,86 +502,113 @@
 
         const p = matchedPayslip;
 
-        /* Top Title */
+        /* Header Info */
         document.getElementById("pA1").innerText = p.company || "";
         document.getElementById("pA2").innerText = p.client || "";
         document.getElementById("pA3").innerText = p.payrollDate || "";
         document.getElementById("pA4").innerText = p.payrollPeriod || "";
-
-        /* Employee Info */
         document.getElementById("pF").innerText = p.empId || "";
         document.getElementById("pG").innerText = p.empName || "";
 
-        /* REGULAR DAYS COMPUTATION (COLUMNS AQ, AR, AS) */
+        /* 1. REGULAR DAYS (AQ / AS) */
         const aqRaw = p.AQ || p.pAQ || p.regDaysCount || p["REGULAR DAYS"] || "0";
         const arRaw = p.AR || p.pAR || p.dailyRate || p["REGULAR DAYS_1"] || p["__EMPTY"] || "0";
-        
         const aqVal = parseFloat(String(aqRaw).replace(/,/g, '')) || 0;
         const arVal = parseFloat(String(arRaw).replace(/,/g, '')) || 0;
 
-        /* Check all possible keys for Column AS (Direct & Merged) */
-        let asVal = 0;
-        const asRaw = p.AS || p.pAS || p.regDaysAmt || p.regularDaysAmt || p["REGULAR DAYS_2"] || p["__EMPTY_1"] || p["__EMPTY_2"];
+        let asVal = parseFloat(String(p.AS || p.pAS || p.regDaysAmt || p["REGULAR DAYS_2"] || p["__EMPTY_1"] || "0").replace(/,/g, '')) || 0;
+        if (asVal === 0 && aqVal > 0 && arVal > 0) asVal = aqVal * arVal;
 
-        if (asRaw !== undefined && asRaw !== null && asRaw !== "") {
-          asVal = parseFloat(String(asRaw).replace(/,/g, '')) || 0;
-        }
+        document.getElementById("pAQ").innerText = formatCount(aqVal);
+        document.getElementById("pAS").innerText = formatVal(asVal);
 
-        /* Fallback: If Column AS is 0/missing, compute AQ * AR directly */
-        if (asVal === 0 && aqVal > 0 && arVal > 0) {
-          asVal = aqVal * arVal;
-        }
+        /* 2. REG OT */
+        document.getElementById("pAV").innerText = formatCount(p.pAV || p.AV || p.regOtCount || p["REG OT"]);
+        document.getElementById("pAW").innerText = formatVal(p.pAW || p.AW || p.regOtAmt || p["REG OT_2"]);
 
-        /* Update Table */
-        document.getElementById("pAQ").innerText = aqVal > 0 ? aqVal : (p.AQ || p.pAQ || "-");
-        document.getElementById("pAS").innerText = asVal.toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        });
+        /* 3. NP */
+        document.getElementById("pAZ").innerText = formatCount(p.pAZ || p.AZ || p.npCount || p["NP"]);
+        document.getElementById("pBA").innerText = formatVal(p.pBA || p.BA || p.npAmt || p["NP_2"]);
 
-        /* Regular OT */
-        document.getElementById("pAV").innerText = p.regOtCount || p.AV || "-";
-        document.getElementById("pAW").innerText = p.regOtAmt || p.AW || "0.00";
+        /* 4. REG OT NP */
+        document.getElementById("pBB").innerText = formatCount(p.pBB || p.BB || p.regOtNpCount || p["REG OT NP"]);
+        document.getElementById("pBC").innerText = formatVal(p.pBC || p.BC || p.regOtNpAmt || p["REG OT NP_2"]);
 
-        /* Night Premium (Catches NP, NIGHT DIFFERENTIALS, etc.) */
-        document.getElementById("pAZ").innerText = p.npCount || p.NP_HOURS || p.npHours || p["NIGHT DIFFERENTIALS HOURS"] || p.AZ || "-";
-        document.getElementById("pBA").innerText = p.npAmt || p.NP || p["NIGHT DIFFERENTIALS"] || p.nightDifferentials || p.BA || "0.00";
+        /* 5. REGULAR HOLIDAY PAY (BD / BE) */
+        document.getElementById("pBD").innerText = formatCount(p.pBD || p.BD || p.regHolNoDutyCount || p["REGULAR HOLIDAY PAY ( NO DUTY)"] || p["REGULAR HOLIDAY PAY"]);
+        document.getElementById("pBE").innerText = formatVal(p.pBE || p.BE || p.regHolNoDutyAmt || p["REGULAR HOLIDAY PAY ( NO DUTY)_2"] || p["REGULAR HOLIDAY PAY_2"]);
 
-        /* Other Earnings */
-        document.getElementById("pBB").innerText = p.regOtNpCount || p.BB || "-";
-        document.getElementById("pBC").innerText = p.regOtNpAmt || p.BC || "0.00";
-        document.getElementById("pBV").innerText = p.restDayCount || p.BV || "-";
-        document.getElementById("pBW").innerText = p.restDayAmt || p.BW || "0.00";
-        document.getElementById("pBX").innerText = p.restDayOtCount || p.BX || "-";
-        document.getElementById("pBY").innerText = p.restDayOtAmt || p.BY || "0.00";
-        document.getElementById("pBZ").innerText = p.restDayNpCount || p.BZ || "-";
-        document.getElementById("pCA").innerText = p.restDayNpAmt || p.CA || "0.00";
-        document.getElementById("pCB").innerText = p.restDayNpOtCount || p.CB || "-";
-        document.getElementById("pCC").innerText = p.restDayNpOtAmt || p.CC || "0.00";
-        document.getElementById("pCT").innerText = p.leavePayCount || p.CT || "-";
-        document.getElementById("pCU").innerText = p.leavePayAmt || p.CU || "0.00";
-        document.getElementById("pCX").innerText = p.grossPay || p.CX || "0.00";
+        /* 6. REGULAR HOLIDAY DUTY (BF / BG) */
+        document.getElementById("pBF").innerText = formatCount(p.pBF || p.BF || p.regHolDutyCount || p["REGULAR HOLIDAY DUTY"]);
+        document.getElementById("pBG").innerText = formatVal(p.pBG || p.BG || p.regHolDutyAmt || p["REGULAR HOLIDAY DUTY_2"]);
 
-        /* Deductions */
-        document.getElementById("pDA").innerText = p.welfare || p.DA || "0.00";
-        document.getElementById("pDB").innerText = p.healthInsurance || p.DB || "0.00";
-        document.getElementById("pDC").innerText = p.insuranceCard || p.DC || "0.00";
-        document.getElementById("pDD").innerText = p.misc || p.DD || "0.00";
-        document.getElementById("pDE").innerText = p.medical || p.DE || "0.00";
-        document.getElementById("pDF").innerText = p.salaryLoan1 || p.DF || "0.00";
-        document.getElementById("pDG").innerText = p.salaryLoan2 || p.DG || "0.00";
-        document.getElementById("pDR").innerText = p.salaryLoan3 || p.DR || "0.00";
-        document.getElementById("pDH").innerText = p.sssLoan || p.DH || "0.00";
-        document.getElementById("pDI").innerText = p.sssCalamityLoan || p.DI || "0.00";
-        document.getElementById("pDJ").innerText = p.hdmfLoan || p.DJ || "0.00";
-        document.getElementById("pDK").innerText = p.hdmfCalamityLoan || p.DK || "0.00";
-        document.getElementById("pDO").innerText = p.totalDeduction || p.DO || "0.00";
+        /* 7. REGULAR HOLIDAY OT */
+        document.getElementById("pBH").innerText = formatCount(p.pBH || p.BH || p.regHolOtCount || p["REGULAR HOLIDAY OT (BEYOND 8 HRS)"] || p["REGULAR HOLIDAY OT"]);
+        document.getElementById("pBI").innerText = formatVal(p.pBI || p.BI || p.regHolOtAmt || p["REGULAR HOLIDAY OT (BEYOND 8 HRS)_2"] || p["REGULAR HOLIDAY OT_2"]);
 
-        /* Adjustments & Net Take Home */
-        document.getElementById("pDP").innerText = p.payrollAdj1 || p.DP || "0.00";
-        document.getElementById("pDQ").innerText = p.payrollAdj2 || p.DQ || "0.00";
-        document.getElementById("pDT").innerText = p.refundSalary || p.DT || "0.00";
-        document.getElementById("pDV").innerText = p.netPay || p.DV || "0.00";
+        /* 8. REGULAR HOLIDAY NP */
+        document.getElementById("pBJ").innerText = formatCount(p.pBJ || p.BJ || p.regHolNpCount || p["REGULAR HOLIDAY NP (10PM~6AM)"] || p["REGULAR HOLIDAY NP"]);
+        document.getElementById("pBK").innerText = formatVal(p.pBK || p.BK || p.regHolNpAmt || p["REGULAR HOLIDAY NP (10PM~6AM)_2"] || p["REGULAR HOLIDAY NP_2"]);
+
+        /* 9. SPECIAL HOLIDAY DUTY */
+        document.getElementById("pBL").innerText = formatCount(p.pBL || p.BL || p.specHolDutyCount || p["SPECIAL HOLIDAY DUTY"]);
+        document.getElementById("pBM").innerText = formatVal(p.pBM || p.BM || p.specHolDutyAmt || p["SPECIAL HOLIDAY DUTY_2"]);
+
+        /* 10. SPECIAL HOLIDAY OT */
+        document.getElementById("pBN").innerText = formatCount(p.pBN || p.BN || p.specHolOtCount || p["SPECIAL HOLIDAY OT (BEYOND 8 HRS)"] || p["SPECIAL HOLIDAY OT"]);
+        document.getElementById("pBO").innerText = formatVal(p.pBO || p.BO || p.specHolOtAmt || p["SPECIAL HOLIDAY OT (BEYOND 8 HRS)_2"] || p["SPECIAL HOLIDAY OT_2"]);
+
+        /* 11. SPECIAL HOLIDAY NP */
+        document.getElementById("pBP").innerText = formatCount(p.pBP || p.BP || p.specHolNpCount || p["SPECIAL HOLIDAY NP (10PM~6AM)"] || p["SPECIAL HOLIDAY NP"]);
+        document.getElementById("pBQ").innerText = formatVal(p.pBQ || p.BQ || p.specHolNpAmt || p["SPECIAL HOLIDAY NP (10PM~6AM)_2"] || p["SPECIAL HOLIDAY NP_2"]);
+
+        /* 12. SPECIAL HOLIDAY OT NP */
+        document.getElementById("pBR").innerText = formatCount(p.pBR || p.BR || p.specHolOtNpCount || p["SPECIAL HOLIDAY OT NP"]);
+        document.getElementById("pBS").innerText = formatVal(p.pBS || p.BS || p.specHolOtNpAmt || p["SPECIAL HOLIDAY OT NP_2"]);
+
+        /* 13. REST DAY */
+        document.getElementById("pBV").innerText = formatCount(p.pBV || p.BV || p.restDayCount || p["REST DAY"]);
+        document.getElementById("pBW").innerText = formatVal(p.pBW || p.BW || p.restDayAmt || p["REST DAY_2"]);
+
+        /* 14. REST DAY OT */
+        document.getElementById("pBX").innerText = formatCount(p.pBX || p.BX || p.restDayOtCount || p["REST DAY OT"]);
+        document.getElementById("pBY").innerText = formatVal(p.pBY || p.BY || p.restDayOtAmt || p["REST DAY OT_2"]);
+
+        /* 15. REST DAY NP */
+        document.getElementById("pBZ").innerText = formatCount(p.pBZ || p.BZ || p.restDayNpCount || p["REST DAY NP (10PM~6AM)"] || p["REST DAY NP"]);
+        document.getElementById("pCA").innerText = formatVal(p.pCA || p.CA || p.restDayNpAmt || p["REST DAY NP (10PM~6AM)_2"] || p["REST DAY NP_2"]);
+
+        /* 16. REST DAY NP OT */
+        document.getElementById("pCB").innerText = formatCount(p.pCB || p.CB || p.restDayNpOtCount || p["REST DAY NP OT"]);
+        document.getElementById("pCC").innerText = formatVal(p.pCC || p.CC || p.restDayNpOtAmt || p["REST DAY NP OT_2"]);
+
+        /* 17. LEAVE WITH PAY */
+        document.getElementById("pCT").innerText = formatCount(p.pCT || p.CT || p.leavePayCount || p["LEAVE WITH PAY"]);
+        document.getElementById("pCU").innerText = formatVal(p.pCU || p.CU || p.leavePayAmt || p["LEAVE WITH PAY_2"]);
+
+        /* GROSS PAY */
+        document.getElementById("pCX").innerText = formatVal(p.pCX || p.CX || p.grossPay);
+
+        /* DEDUCTIONS */
+        document.getElementById("pDA").innerText = formatVal(p.pDA || p.DA || p.welfare);
+        document.getElementById("pDB").innerText = formatVal(p.pDB || p.DB || p.healthInsurance);
+        document.getElementById("pDC").innerText = formatVal(p.pDC || p.DC || p.insuranceCard);
+        document.getElementById("pDD").innerText = formatVal(p.pDD || p.DD || p.misc);
+        document.getElementById("pDE").innerText = formatVal(p.pDE || p.DE || p.medical);
+        document.getElementById("pDF").innerText = formatVal(p.pDF || p.DF || p.salaryLoan1);
+        document.getElementById("pDG").innerText = formatVal(p.pDG || p.DG || p.salaryLoan2);
+        document.getElementById("pDR").innerText = formatVal(p.pDR || p.DR || p.salaryLoan3);
+        document.getElementById("pDH").innerText = formatVal(p.pDH || p.DH || p.sssLoan);
+        document.getElementById("pDI").innerText = formatVal(p.pDI || p.DI || p.sssCalamityLoan);
+        document.getElementById("pDJ").innerText = formatVal(p.pDJ || p.DJ || p.hdmfLoan);
+        document.getElementById("pDK").innerText = formatVal(p.pDK || p.DK || p.hdmfCalamityLoan);
+        document.getElementById("pDO").innerText = formatVal(p.pDO || p.DO || p.totalDeduction);
+
+        /* ADJUSTMENTS & NET TAKE HOME */
+        document.getElementById("pDP").innerText = formatVal(p.pDP || p.DP || p.payrollAdj1);
+        document.getElementById("pDQ").innerText = formatVal(p.pDQ || p.DQ || p.payrollAdj2);
+        document.getElementById("pDT").innerText = formatVal(p.pDT || p.DT || p.refundSalary);
+        document.getElementById("pDV").innerText = formatVal(p.pDV || p.DV || p.netPay);
 
         box.style.display = "block";
 
