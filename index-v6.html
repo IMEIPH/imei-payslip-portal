@@ -510,30 +510,29 @@
         document.getElementById("pF").innerText = p.empId || "";
         document.getElementById("pG").innerText = p.empName || "";
 
-        /* 1. REGULAR DAYS (AQ = Days, AS = Amount) */
+        /* 1. REGULAR DAYS (AQ = Days, AR = Daily Rate, AS = Total Regular Amount) */
         const aqRaw = p.pAQ ?? p.AQ ?? p.regDaysCount ?? p["REGULAR DAYS"] ?? "0";
+        const arRaw = p.pAR ?? p.AR ?? p.regDaysRate ?? p["REGULAR DAYS_2"] ?? p["__EMPTY_1"] ?? "0";
 
-        // Dynamic search across document keys for Column AS / REGULAR DAYS Amount field
-        let rawAS = undefined;
-        
-        // Check explicit standard field properties first
-        if (p.pAS !== undefined) rawAS = p.pAS;
-        else if (p.AS !== undefined) rawAS = p.AS;
-        else if (p.regDaysAmt !== undefined) rawAS = p.regDaysAmt;
+        const aqVal = parseFloat(String(aqRaw).replace(/,/g, '')) || 0;
+        const arVal = parseFloat(String(arRaw).replace(/,/g, '')) || 0;
 
-        // Otherwise scan document keys dynamically for exact column AS indicators
-        if (rawAS === undefined) {
-          for (let key in p) {
-            const cleanKey = key.trim().toUpperCase();
-            if (cleanKey === "AS" || cleanKey === "PAS" || cleanKey === "REGULAR DAYS_3" || cleanKey === "__EMPTY_2") {
-              rawAS = p[key];
-              break;
-            }
-          }
+        // Find the actual AS column value that is NOT the daily rate (540)
+        let asRaw = undefined;
+
+        // 1. First check explicit amount fields
+        if (p.regDaysAmt !== undefined) asRaw = p.regDaysAmt;
+        else if (p["REGULAR DAYS_3"] !== undefined) asRaw = p["REGULAR DAYS_3"];
+        else if (p["__EMPTY_2"] !== undefined) asRaw = p["__EMPTY_2"];
+
+        // 2. If missing or if asRaw was incorrectly set to daily rate (AR), compute it directly (AQ * AR)
+        let finalAsVal = parseFloat(String(asRaw || 0).replace(/,/g, ''));
+        if (!asRaw || isNaN(finalAsVal) || finalAsVal === arVal) {
+          finalAsVal = aqVal * arVal;
         }
 
-        document.getElementById("pAQ").innerText = formatCount(aqRaw);
-        document.getElementById("pAS").innerText = formatVal(rawAS);
+        document.getElementById("pAQ").innerText = formatCount(aqVal);
+        document.getElementById("pAS").innerText = formatVal(finalAsVal);
 
         /* 2. REG OT */
         document.getElementById("pAV").innerText = formatCount(p.pAV || p.AV || p.regOtCount || p["REG OT"]);
