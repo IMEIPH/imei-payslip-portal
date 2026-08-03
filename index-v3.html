@@ -1,12 +1,10 @@
-<script>
-/* Submit Registration Request */
 async function submitRegistration() {
   const rawEmpId = document.getElementById("regEmpId").value.trim();
   
-  /* 1. Remove dashes, spaces, special chars & convert to uppercase */
+  /* 1. Clean ID: Remove dashes/spaces and convert to uppercase */
   const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-  /* 2. Keep PIN strictly as a string */
+  /* 2. Get PINs as text strings (preserves leading/trailing zeros) */
   const pin = document.getElementById("regPin").value.trim();
   const pinConfirm = document.getElementById("regPinConfirm").value.trim();
   const statusDiv = document.getElementById("regStatus");
@@ -19,14 +17,14 @@ async function submitRegistration() {
     return;
   }
 
-  /* 4. Exactly 6 digits check */
+  /* 4. Must be exactly 6 numeric digits */
   const pinRegex = /^\d{6}$/;
   if (!pinRegex.test(pin)) {
     statusDiv.innerHTML = "<span style='color:red;'>PIN MUST BE EXACTLY 6 DIGITS (NUMBERS ONLY).</span>";
     return;
   }
 
-  /* 5. Validate matching PINs */
+  /* 5. Check if PINs match */
   if (pin !== pinConfirm) {
     statusDiv.innerHTML = "<span style='color:red;'>PINS DO NOT MATCH. PLEASE TRY AGAIN.</span>";
     return;
@@ -35,7 +33,7 @@ async function submitRegistration() {
   try {
     statusDiv.innerHTML = "<span style='color:blue;'>Checking ID...</span>";
 
-    /* 6. Check if normalized ID exists */
+    /* 6. Check if normalized ID already exists */
     const empDoc = await db.collection("employees").doc(empId).get();
     const reqDoc = await db.collection("registration_requests").doc(empId).get();
 
@@ -45,7 +43,7 @@ async function submitRegistration() {
       return;
     }
 
-    /* 7. Save to Firestore */
+    /* 7. Save request as String to Firestore */
     await db.collection("registration_requests").doc(empId).set({
       empId: String(empId),
       pin: String(pin),
@@ -64,4 +62,3 @@ async function submitRegistration() {
     statusDiv.innerHTML = "<span style='color:red;'>ERROR: " + err.message + "</span>";
   }
 }
-</script>
