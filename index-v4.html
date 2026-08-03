@@ -517,7 +517,13 @@
         const arVal = parseFloat(String(arRaw).replace(/,/g, '')) || 0;
 
         let asVal = parseFloat(String(p.AS || p.pAS || p.regDaysAmt || p["REGULAR DAYS_2"] || p["__EMPTY_1"] || "0").replace(/,/g, '')) || 0;
-        if (asVal === 0 && aqVal > 0 && arVal > 0) asVal = aqVal * arVal;
+        
+        /* If asVal is 0 or incorrectly pulled the Daily Rate (AR), calculate Days * Rate */
+        if (aqVal > 0 && arVal > 0) {
+          if (asVal === 0 || Math.abs(asVal - arVal) < 0.01) {
+            asVal = aqVal * arVal;
+          }
+        }
 
         document.getElementById("pAQ").innerText = formatCount(aqVal);
         document.getElementById("pAS").innerText = formatVal(asVal);
