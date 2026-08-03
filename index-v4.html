@@ -510,20 +510,12 @@
         document.getElementById("pF").innerText = p.empId || "";
         document.getElementById("pG").innerText = p.empName || "";
 
-        /* 1. REGULAR DAYS (AQ / AS) */
-        const aqRaw = p.AQ || p.pAQ || p.regDaysCount || p["REGULAR DAYS"] || "0";
-        const arRaw = p.AR || p.pAR || p.dailyRate || p["REGULAR DAYS_1"] || p["__EMPTY"] || "0";
-        const aqVal = parseFloat(String(aqRaw).replace(/,/g, '')) || 0;
-        const arVal = parseFloat(String(arRaw).replace(/,/g, '')) || 0;
+        /* 1. REGULAR DAYS (AQ = Days, AS = Amount) */
+        const aqRaw = p.AQ ?? p.pAQ ?? p.regDaysCount ?? p["REGULAR DAYS"] ?? "0";
+        const asRaw = p.AS ?? p.pAS ?? p.regDaysAmt ?? p["__EMPTY_1"] ?? p["REGULAR DAYS_2"] ?? "0";
 
-        let asVal = parseFloat(String(p.AS || p.pAS || p.regDaysAmt || p["REGULAR DAYS_2"] || p["__EMPTY_1"] || "0").replace(/,/g, '')) || 0;
-        
-        /* If asVal is 0 or incorrectly pulled the Daily Rate (AR), calculate Days * Rate */
-        if (aqVal > 0 && arVal > 0) {
-          if (asVal === 0 || Math.abs(asVal - arVal) < 0.01) {
-            asVal = aqVal * arVal;
-          }
-        }
+        const aqVal = parseFloat(String(aqRaw).replace(/,/g, '')) || 0;
+        const asVal = parseFloat(String(asRaw).replace(/,/g, '')) || 0;
 
         document.getElementById("pAQ").innerText = formatCount(aqVal);
         document.getElementById("pAS").innerText = formatVal(asVal);
@@ -540,11 +532,11 @@
         document.getElementById("pBB").innerText = formatCount(p.pBB || p.BB || p.regOtNpCount || p["REG OT NP"]);
         document.getElementById("pBC").innerText = formatVal(p.pBC || p.BC || p.regOtNpAmt || p["REG OT NP_2"]);
 
-        /* 5. REGULAR HOLIDAY PAY (BD / BE) */
+        /* 5. REGULAR HOLIDAY PAY */
         document.getElementById("pBD").innerText = formatCount(p.pBD || p.BD || p.regHolNoDutyCount || p["REGULAR HOLIDAY PAY ( NO DUTY)"] || p["REGULAR HOLIDAY PAY"]);
         document.getElementById("pBE").innerText = formatVal(p.pBE || p.BE || p.regHolNoDutyAmt || p["REGULAR HOLIDAY PAY ( NO DUTY)_2"] || p["REGULAR HOLIDAY PAY_2"]);
 
-        /* 6. REGULAR HOLIDAY DUTY (BF / BG) */
+        /* 6. REGULAR HOLIDAY DUTY */
         document.getElementById("pBF").innerText = formatCount(p.pBF || p.BF || p.regHolDutyCount || p["REGULAR HOLIDAY DUTY"]);
         document.getElementById("pBG").innerText = formatVal(p.pBG || p.BG || p.regHolDutyAmt || p["REGULAR HOLIDAY DUTY_2"]);
 
