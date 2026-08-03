@@ -244,7 +244,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAR">0.00</td></tr>
+          <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAS">0.00</td></tr>
           <tr><td class="text-left">REGULAR OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
           <tr><td class="text-left">NIGHT PREMIUM</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
           <tr><td class="text-left">REGULAR OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
@@ -363,8 +363,6 @@
     /* Submit Registration Request */
     async function submitRegistration() {
       const rawEmpId = document.getElementById("regEmpId").value.trim();
-      
-      /* Sanitize ID input */
       const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
       const pin = document.getElementById("regPin").value.trim();
@@ -423,7 +421,6 @@
     /* View Payslip Function */
     async function viewPayslip() {
       const rawEmpId = document.getElementById("empId").value.trim();
-      
       const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       const pin = document.getElementById("pin").value.trim();
       
@@ -497,11 +494,17 @@
 
         /* Earnings & Hours */
         document.getElementById("pAQ").innerText = p.regDaysCount || "-";
-        document.getElementById("pAR").innerText = p.regDaysAmt || "0.00";
+        
+        /* Pulling Regular Days Amount from Column AS */
+        document.getElementById("pAS").innerText = p.pAS || p.regDaysAmt || "0.00";
+        
         document.getElementById("pAV").innerText = p.regOtCount || "-";
         document.getElementById("pAW").innerText = p.regOtAmt || "0.00";
-        document.getElementById("pAZ").innerText = p.npCount || "-";
-        document.getElementById("pBA").innerText = p.npAmt || "0.00";
+        
+        /* Night Premium: Checks Excel fields 'npCount'/'NP_HOURS' and 'npAmt'/'NP' */
+        document.getElementById("pAZ").innerText = p.npCount || p.NP_HOURS || p.npHours || "-";
+        document.getElementById("pBA").innerText = p.npAmt || p.NP || p.nightPremium || "0.00";
+        
         document.getElementById("pBB").innerText = p.regOtNpCount || "-";
         document.getElementById("pBC").innerText = p.regOtNpAmt || "0.00";
         document.getElementById("pBV").innerText = p.restDayCount || "-";
