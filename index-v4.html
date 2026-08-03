@@ -511,8 +511,9 @@
         document.getElementById("pG").innerText = p.empName || "";
 
         /* 1. REGULAR DAYS (AQ = Days, AS = Amount) */
-        const aqRaw = p.AQ ?? p.pAQ ?? p.regDaysCount ?? p["REGULAR DAYS"] ?? "0";
-        const asRaw = p.AS ?? p.pAS ?? p.regDaysAmt ?? p["__EMPTY_1"] ?? p["REGULAR DAYS_2"] ?? "0";
+        const aqRaw = p.pAQ ?? p.AQ ?? p.regDaysCount ?? p["REGULAR DAYS"] ?? "0";
+        // Bypasses column AR (Rate: 540) by prioritizing pAS / AS / regDaysAmt and column AS header fallbacks (REGULAR DAYS_3 / __EMPTY_2)
+        const asRaw = p.pAS ?? p.AS ?? p.regDaysAmt ?? p["REGULAR DAYS_3"] ?? p["__EMPTY_2"] ?? p["REGULAR DAYS_2"] ?? p["__EMPTY_1"] ?? "0";
 
         const aqVal = parseFloat(String(aqRaw).replace(/,/g, '')) || 0;
         const asVal = parseFloat(String(asRaw).replace(/,/g, '')) || 0;
