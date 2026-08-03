@@ -492,53 +492,53 @@
         document.getElementById("pF").innerText = p.empId || "";
         document.getElementById("pG").innerText = p.empName || "";
 
-        /* Earnings & Hours */
-        document.getElementById("pAQ").innerText = p.regDaysCount || "-";
+        /* Regular Working Days (Column AQ & Column AS) */
+        document.getElementById("pAQ").innerText = p.AQ || p.pAQ || p.regDaysCount || p["REGULAR DAYS"] || "-";
+        document.getElementById("pAS").innerText = p.AS || p.pAS || p.regDaysAmt || p.regularDaysAmt || p["REGULAR DAYS AMOUNT"] || p["REGULAR DAYS AMT"] || "0.00";
         
-        /* Pulling Regular Days Amount from Column AS */
-        document.getElementById("pAS").innerText = p.pAS || p.regDaysAmt || "0.00";
-        
-        document.getElementById("pAV").innerText = p.regOtCount || "-";
-        document.getElementById("pAW").innerText = p.regOtAmt || "0.00";
-        
-        /* Night Premium: Checks Excel fields 'npCount'/'NP_HOURS' and 'npAmt'/'NP' */
-        document.getElementById("pAZ").innerText = p.npCount || p.NP_HOURS || p.npHours || "-";
-        document.getElementById("pBA").innerText = p.npAmt || p.NP || p.nightPremium || "0.00";
-        
-        document.getElementById("pBB").innerText = p.regOtNpCount || "-";
-        document.getElementById("pBC").innerText = p.regOtNpAmt || "0.00";
-        document.getElementById("pBV").innerText = p.restDayCount || "-";
-        document.getElementById("pBW").innerText = p.restDayAmt || "0.00";
-        document.getElementById("pBX").innerText = p.restDayOtCount || "-";
-        document.getElementById("pBY").innerText = p.restDayOtAmt || "0.00";
-        document.getElementById("pBZ").innerText = p.restDayNpCount || "-";
-        document.getElementById("pCA").innerText = p.restDayNpAmt || "0.00";
-        document.getElementById("pCB").innerText = p.restDayNpOtCount || "-";
-        document.getElementById("pCC").innerText = p.restDayNpOtAmt || "0.00";
-        document.getElementById("pCT").innerText = p.leavePayCount || "-";
-        document.getElementById("pCU").innerText = p.leavePayAmt || "0.00";
-        document.getElementById("pCX").innerText = p.grossPay || "0.00";
+        /* Regular OT */
+        document.getElementById("pAV").innerText = p.regOtCount || p.AV || "-";
+        document.getElementById("pAW").innerText = p.regOtAmt || p.AW || "0.00";
+
+        /* Night Premium (Catches NP, NIGHT DIFFERENTIALS, etc.) */
+        document.getElementById("pAZ").innerText = p.npCount || p.NP_HOURS || p.npHours || p["NIGHT DIFFERENTIALS HOURS"] || p.AZ || "-";
+        document.getElementById("pBA").innerText = p.npAmt || p.NP || p["NIGHT DIFFERENTIALS"] || p.nightDifferentials || p.BA || "0.00";
+
+        /* Other Earnings */
+        document.getElementById("pBB").innerText = p.regOtNpCount || p.BB || "-";
+        document.getElementById("pBC").innerText = p.regOtNpAmt || p.BC || "0.00";
+        document.getElementById("pBV").innerText = p.restDayCount || p.BV || "-";
+        document.getElementById("pBW").innerText = p.restDayAmt || p.BW || "0.00";
+        document.getElementById("pBX").innerText = p.restDayOtCount || p.BX || "-";
+        document.getElementById("pBY").innerText = p.restDayOtAmt || p.BY || "0.00";
+        document.getElementById("pBZ").innerText = p.restDayNpCount || p.BZ || "-";
+        document.getElementById("pCA").innerText = p.restDayNpAmt || p.CA || "0.00";
+        document.getElementById("pCB").innerText = p.restDayNpOtCount || p.CB || "-";
+        document.getElementById("pCC").innerText = p.restDayNpOtAmt || p.CC || "0.00";
+        document.getElementById("pCT").innerText = p.leavePayCount || p.CT || "-";
+        document.getElementById("pCU").innerText = p.leavePayAmt || p.CU || "0.00";
+        document.getElementById("pCX").innerText = p.grossPay || p.CX || "0.00";
 
         /* Deductions */
-        document.getElementById("pDA").innerText = p.welfare || "0.00";
-        document.getElementById("pDB").innerText = p.healthInsurance || "0.00";
-        document.getElementById("pDC").innerText = p.insuranceCard || "0.00";
-        document.getElementById("pDD").innerText = p.misc || "0.00";
-        document.getElementById("pDE").innerText = p.medical || "0.00";
-        document.getElementById("pDF").innerText = p.salaryLoan1 || "0.00";
-        document.getElementById("pDG").innerText = p.salaryLoan2 || "0.00";
-        document.getElementById("pDR").innerText = p.salaryLoan3 || "0.00";
-        document.getElementById("pDH").innerText = p.sssLoan || "0.00";
-        document.getElementById("pDI").innerText = p.sssCalamityLoan || "0.00";
-        document.getElementById("pDJ").innerText = p.hdmfLoan || "0.00";
-        document.getElementById("pDK").innerText = p.hdmfCalamityLoan || "0.00";
-        document.getElementById("pDO").innerText = p.totalDeduction || "0.00";
+        document.getElementById("pDA").innerText = p.welfare || p.DA || "0.00";
+        document.getElementById("pDB").innerText = p.healthInsurance || p.DB || "0.00";
+        document.getElementById("pDC").innerText = p.insuranceCard || p.DC || "0.00";
+        document.getElementById("pDD").innerText = p.misc || p.DD || "0.00";
+        document.getElementById("pDE").innerText = p.medical || p.DE || "0.00";
+        document.getElementById("pDF").innerText = p.salaryLoan1 || p.DF || "0.00";
+        document.getElementById("pDG").innerText = p.salaryLoan2 || p.DG || "0.00";
+        document.getElementById("pDR").innerText = p.salaryLoan3 || p.DR || "0.00";
+        document.getElementById("pDH").innerText = p.sssLoan || p.DH || "0.00";
+        document.getElementById("pDI").innerText = p.sssCalamityLoan || p.DI || "0.00";
+        document.getElementById("pDJ").innerText = p.hdmfLoan || p.DJ || "0.00";
+        document.getElementById("pDK").innerText = p.hdmfCalamityLoan || p.DK || "0.00";
+        document.getElementById("pDO").innerText = p.totalDeduction || p.DO || "0.00";
 
-        /* Adjustments & Net */
-        document.getElementById("pDP").innerText = p.payrollAdj1 || "0.00";
-        document.getElementById("pDQ").innerText = p.payrollAdj2 || "0.00";
-        document.getElementById("pDT").innerText = p.refundSalary || "0.00";
-        document.getElementById("pDV").innerText = p.netPay || "0.00";
+        /* Adjustments & Net Take Home */
+        document.getElementById("pDP").innerText = p.payrollAdj1 || p.DP || "0.00";
+        document.getElementById("pDQ").innerText = p.payrollAdj2 || p.DQ || "0.00";
+        document.getElementById("pDT").innerText = p.refundSalary || p.DT || "0.00";
+        document.getElementById("pDV").innerText = p.netPay || p.DV || "0.00";
 
         box.style.display = "block";
 
