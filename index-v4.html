@@ -5,31 +5,135 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Employee Payslip Portal</title>
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f7fafc; padding: 20px; display: flex; justify-content: center; }
-    .container { width: 100%; max-width: 650px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; }
+    * { 
+      box-sizing: border-box; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+    }
+    body { 
+      background-color: #f8fafc; 
+      margin: 0;
+      padding: 40px 20px; 
+      display: flex; 
+      justify-content: center; 
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    .container { 
+      width: 100%; 
+      max-width: 620px; 
+      background: #ffffff; 
+      padding: 30px; 
+      border-radius: 10px; 
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); 
+      position: relative; 
+    }
     
-    /* TOP HEADER & REGISTER BUTTON */
-    .portal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .portal-header h2 { margin: 0; font-size: 20px; color: #1a202c; }
-    .btn-register-link { background: #38a169; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; text-transform: uppercase; }
-    .btn-register-link:hover { background: #2f855a; }
+    /* HEADER */
+    .portal-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 24px; 
+    }
+    .portal-header h2 { 
+      margin: 0; 
+      font-size: 20px; 
+      font-weight: 800; 
+      color: #1e293b; 
+      letter-spacing: -0.3px;
+    }
+    .btn-register-link { 
+      background: #27a365; 
+      color: white; 
+      border: none; 
+      padding: 8px 16px; 
+      border-radius: 6px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      font-size: 12px; 
+      text-transform: uppercase; 
+      letter-spacing: 0.3px;
+      transition: background 0.2s;
+    }
+    .btn-register-link:hover { 
+      background: #218854; 
+    }
 
-    .login-section { border-bottom: 2px solid #edf2f7; padding-bottom: 20px; margin-bottom: 20px; }
-    .input-group { margin-bottom: 15px; }
-    label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 14px; }
-    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; background: #fff; }
+    /* FORM STYLING */
+    .login-section { 
+      padding-bottom: 5px; 
+    }
+    .input-group { 
+      margin-bottom: 18px; 
+    }
+    label { 
+      font-weight: 700; 
+      display: block; 
+      margin-bottom: 8px; 
+      color: #475569; 
+      font-size: 13px; 
+      letter-spacing: 0.2px;
+    }
+    input, select { 
+      width: 100%; 
+      padding: 11px 14px; 
+      border: 1px solid #cbd5e1; 
+      border-radius: 6px; 
+      font-size: 14px; 
+      background: #ffffff; 
+      color: #1e293b;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    input::placeholder, select {
+      color: #94a3b8;
+    }
     
     /* DATE GRID LAYOUT */
-    .date-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+    .date-grid { 
+      display: grid; 
+      grid-template-columns: 2.2fr 1fr 1fr; 
+      gap: 10px; 
+    }
     
-    .btn-primary { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .btn-primary:hover { background: #2b6cb0; }
+    .btn-primary { 
+      width: 100%; 
+      padding: 12px; 
+      background: #3182ce; 
+      color: white; 
+      border: none; 
+      border-radius: 6px; 
+      font-size: 15px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      margin-top: 6px; 
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { 
+      background: #2b6cb0; 
+    }
     
     /* PAYSLIP DISPLAY STYLES */
-    .payslip-box { display: none; margin-top: 25px; border: 1px solid #cbd5e0; border-radius: 8px; padding: 25px; background: #fff; }
+    .payslip-box { 
+      display: none; 
+      margin-top: 25px; 
+      border: 1px solid #cbd5e0; 
+      border-radius: 8px; 
+      padding: 25px; 
+      background: #fff; 
+    }
     
-    .payslip-title { text-align: center; border-bottom: 2px dashed #cbd5e0; padding-bottom: 15px; margin-bottom: 20px; }
+    .payslip-title { 
+      text-align: center; 
+      border-bottom: 2px dashed #cbd5e0; 
+      padding-bottom: 15px; 
+      margin-bottom: 20px; 
+    }
     .payslip-title h2 { margin: 0 0 5px 0; color: #1a202c; text-transform: uppercase; font-size: 20px; }
     .payslip-title h3 { margin: 0 0 5px 0; color: #4a5568; text-transform: uppercase; font-size: 16px; }
     .payslip-title p { margin: 3px 0; color: #2d3748; font-weight: bold; font-size: 14px; text-transform: uppercase; }
@@ -50,7 +154,7 @@
     .highlight-row { background: #ebf8ff; font-weight: bold; color: #2b6cb0; }
     .net-pay-row { background: #c6f6d5; font-weight: bold; color: #22543d; font-size: 15px; }
 
-    .error-msg { color: #e53e3e; font-weight: bold; text-align: center; margin-top: 10px; display: none; font-size: 14px; }
+    .error-msg { color: #e53e3e; font-weight: bold; text-align: center; margin-top: 15px; display: none; font-size: 14px; }
 
     /* MODAL STYLES FOR REGISTER ID */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -224,7 +328,7 @@
         <input type="password" id="regPinConfirm" placeholder="RE-ENTER 6-DIGIT PIN" maxlength="6">
       </div>
 
-      <button class="btn-primary" style="background:#38a169;" onclick="submitRegistration()">SUBMIT REGISTRATION</button>
+      <button class="btn-primary" style="background:#27a365;" onclick="submitRegistration()">SUBMIT REGISTRATION</button>
       <div id="regStatus" style="margin-top: 10px; font-weight: bold; text-align: center; font-size: 14px;"></div>
     </div>
   </div>
@@ -260,30 +364,26 @@
     async function submitRegistration() {
       const rawEmpId = document.getElementById("regEmpId").value.trim();
       
-      /* 1. Remove dashes, spaces, special chars & convert to uppercase (IS-058 -> IS058) */
+      /* Sanitize ID input */
       const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-      /* 2. Keep PIN strictly as a string (preserves leading/trailing 0s) */
       const pin = document.getElementById("regPin").value.trim();
       const pinConfirm = document.getElementById("regPinConfirm").value.trim();
       const statusDiv = document.getElementById("regStatus");
 
       statusDiv.innerHTML = "";
 
-      /* 3. Check for empty inputs */
       if (!empId || !pin || !pinConfirm) {
         statusDiv.innerHTML = "<span style='color:red;'>PLEASE FILL IN ALL FIELDS.</span>";
         return;
       }
 
-      /* 4. Exactly 6 digits validation using Regex */
       const pinRegex = /^\d{6}$/;
       if (!pinRegex.test(pin)) {
         statusDiv.innerHTML = "<span style='color:red;'>PIN MUST BE EXACTLY 6 DIGITS (NUMBERS ONLY).</span>";
         return;
       }
 
-      /* 5. Validate matching PINs */
       if (pin !== pinConfirm) {
         statusDiv.innerHTML = "<span style='color:red;'>PINS DO NOT MATCH. PLEASE TRY AGAIN.</span>";
         return;
@@ -292,7 +392,6 @@
       try {
         statusDiv.innerHTML = "<span style='color:blue;'>Checking ID...</span>";
 
-        /* 6. Check if normalized ID already exists in employees OR pending requests */
         const empDoc = await db.collection("employees").doc(empId).get();
         const reqDoc = await db.collection("registration_requests").doc(empId).get();
 
@@ -302,7 +401,6 @@
           return;
         }
 
-        /* 7. Save as String to Firebase (Ensures Firestore preserves leading/trailing 0s) */
         await db.collection("registration_requests").doc(empId).set({
           empId: String(empId),
           pin: String(pin),
@@ -326,7 +424,6 @@
     async function viewPayslip() {
       const rawEmpId = document.getElementById("empId").value.trim();
       
-      /* Sanitize ID input to match database format */
       const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       const pin = document.getElementById("pin").value.trim();
       
@@ -353,7 +450,6 @@
       }
 
       try {
-        /* 1. Verify Employee Credentials (String comparison to preserve zeros) */
         const empDoc = await db.collection("employees").doc(empId).get();
         if(!empDoc.exists || String(empDoc.data().pin) !== String(pin)) {
           errorMsg.innerText = "INVALID EMPLOYEE ID OR PIN.";
@@ -361,7 +457,6 @@
           return;
         }
 
-        /* 2. Query payslips for this employee */
         const snapshot = await db.collection("payslips")
           .where("empId", "==", empId)
           .get();
@@ -372,7 +467,6 @@
           return;
         }
 
-        /* 3. Filter results locally to match Month, Day, and Year inside payroll date */
         let matchedPayslip = null;
         snapshot.forEach(doc => {
           const data = doc.data();
@@ -391,13 +485,13 @@
 
         const p = matchedPayslip;
 
-        /* Top Title: A1, A2, A3, A4 */
+        /* Top Title */
         document.getElementById("pA1").innerText = p.company || "";
         document.getElementById("pA2").innerText = p.client || "";
         document.getElementById("pA3").innerText = p.payrollDate || "";
         document.getElementById("pA4").innerText = p.payrollPeriod || "";
 
-        /* Employee Info: F, G */
+        /* Employee Info */
         document.getElementById("pF").innerText = p.empId || "";
         document.getElementById("pG").innerText = p.empName || "";
 
