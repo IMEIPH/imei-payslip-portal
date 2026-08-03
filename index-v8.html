@@ -11,7 +11,7 @@
     
     .input-group { margin-bottom: 15px; }
     label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 14px; }
-    input { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; background: #fff; }
     
     button { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; }
     button:hover { background: #2b6cb0; }
@@ -42,14 +42,23 @@
   <!-- LOGIN CARD -->
   <div id="loginCard" class="card">
     <h2 style="text-align: center; margin-top: 0; color: #2d3748;">EMPLOYEE PAYSLIP</h2>
+    
     <div class="input-group">
       <label>EMPLOYEE ID</label>
       <input type="text" id="empIdInput" placeholder="e.g. EMP1001">
     </div>
+    
     <div class="input-group">
       <label>PIN</label>
       <input type="password" id="pinInput" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
     </div>
+
+    <!-- RESTORED PAYROLL PERIOD / DATE SELECTION -->
+    <div class="input-group">
+      <label>PAYROLL PERIOD / DATE</label>
+      <input type="date" id="payrollDateInput">
+    </div>
+
     <button onclick="viewPayslip()">VIEW PAYSLIP</button>
     <div id="loginErr" class="error-msg"></div>
   </div>
@@ -58,7 +67,7 @@
   <div id="payslipCard" class="card">
     <div class="payslip-header">
       <h2 id="dispEmpName">---</h2>
-      <p>ID: <strong id="dispEmpId">---</strong></p>
+      <p>ID: <strong id="dispEmpId">---</strong> | Period: <strong id="dispPeriodDate">---</strong></p>
     </div>
 
     <h3>EARNINGS SUMMARY</h3>
@@ -128,17 +137,24 @@
     async function viewPayslip() {
       const rawId = document.getElementById("empIdInput").value.trim();
       const pin = document.getElementById("pinInput").value.trim();
+      const selectedDate = document.getElementById("payrollDateInput").value;
       const err = document.getElementById("loginErr");
       err.innerText = "";
 
       if (!rawId || !pin) {
-        err.innerText = "Please fill in both Employee ID and PIN.";
+        err.innerText = "Please enter both Employee ID and PIN.";
+        return;
+      }
+
+      if (!selectedDate) {
+        err.innerText = "Please select a Payroll Period / Date.";
         return;
       }
 
       const empId = rawId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
       try {
+        // 1. Verify Credentials
         const empDoc = await db.collection("employees").doc(empId).get();
 
         if (!empDoc.exists) {
@@ -152,14 +168,34 @@
           return;
         }
 
-        const payslipDoc = await db.collection("payslips").doc(empId).get();
+        // 2. Fetch Payslip for the specified Date/Period OR fallback to latest matching ID
+        let querySnapshot = await db.collection("payslips")
+          .where("empId", "==", empId)
+          .where("payrollPeriod", "==", selectedDate)
+          .get();
 
-        if (!payslipDoc.exists) {
-          err.innerText = "No payslip record available for this Employee ID.";
+        if (querySnapshot.empty) {
+          // Fallback check if stored under composite document key [EMPID_DATE] or fallback doc
+          const docDirect = await db.collection("payslips").doc(`${empId}_${selectedDate}`).get();
+          if (docDirect.exists) {
+            renderPayslip(docDirect.data(), selectedDate);
+            return;
+          }
+
+          // Fallback to primary ID document if period filtering is not strictly matched
+          const docFallback = await db.collection("payslips").doc(empId).get();
+          if (docFallback.exists) {
+            renderPayslip(docFallback.data(), selectedDate);
+            return;
+          }
+
+          err.innerText = "No payslip record found for the selected Date / Period.";
           return;
         }
 
-        renderPayslip(payslipDoc.data());
+        querySnapshot.forEach(doc => {
+          renderPayslip(doc.data(), selectedDate);
+        });
 
       } catch (error) {
         console.error(error);
@@ -167,9 +203,10 @@
       }
     }
 
-    function renderPayslip(data) {
+    function renderPayslip(data, dateStr) {
       document.getElementById("dispEmpId").innerText = data.empId || "---";
       document.getElementById("dispEmpName").innerText = data.empName || "EMPLOYEE";
+      document.getElementById("dispPeriodDate").innerText = dateStr || data.payrollPeriod || "---";
 
       // Regular Days (Mapped from AQ and AS)
       document.getElementById("dispRegDays").innerText = data.regularDays || 0;
@@ -201,6 +238,7 @@
     function logoutEmployee() {
       document.getElementById("empIdInput").value = "";
       document.getElementById("pinInput").value = "";
+      document.getElementById("payrollDateInput").value = "";
       document.getElementById("loginErr").innerText = "";
       document.getElementById("payslipCard").style.display = "none";
       document.getElementById("loginCard").style.display = "block";
