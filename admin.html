@@ -59,7 +59,7 @@
     .drag-handle { cursor: grab; font-weight: bold; color: #a0aec0; padding: 0 4px; font-size: 16px; user-select: none; }
     .map-input-name { flex: 2; text-transform: uppercase; font-size: 12px; }
     .map-input-unit { flex: 1; text-transform: uppercase; font-size: 12px; }
-    .map-input-col { flex: 0.9; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px; }
+    .map-input-col { flex: 1.2; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px; }
     .btn-icon-danger { background: #fed7d7; color: #9b2c2c; border: none; border-radius: 4px; padding: 8px 10px; cursor: pointer; font-weight: bold; }
     .btn-icon-danger:hover { background: #feb2b2; }
 
@@ -244,7 +244,9 @@
   <div id="mappingModal" class="modal-overlay">
     <div class="modal-content">
       <h3 id="mappingModalTitle" style="margin-top: 0; color: #2b6cb0;">Custom Column Mapping</h3>
-      <p style="font-size: 12px; color: #718096; margin-bottom: 15px;">Customize item names, unit headers, Qty columns, and Amount columns. Drag rows (☰) to reorder.</p>
+      <p style="font-size: 12px; color: #718096; margin-bottom: 15px;">
+        Customize item names, unit headers, Qty columns, and Amount columns. Single columns (e.g. <code>AQ</code>) or Excel math formulas (e.g. <code>=A1+A2</code> or <code>=A+B-C</code> up to 5 cols) are supported. Drag rows (☰) to reorder.
+      </p>
 
       <!-- EMPLOYEE IDENTIFICATION MAPPING -->
       <div class="mapping-section-header header-info">
@@ -274,8 +276,8 @@
       </div>
       <div class="mapping-row" style="cursor: default; background: #ebf8ff; margin-bottom: 15px;">
         <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL GROSS PAY" readonly style="flex: 3.2; font-weight: bold; background: #e2e8f0; font-size: 12px;">
-        <input type="text" id="grossPayColInput" placeholder="EXCEL COL (E.G. BB)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <input type="text" value="TOTAL GROSS PAY" readonly style="flex: 3; font-weight: bold; background: #e2e8f0; font-size: 12px;">
+        <input type="text" id="grossPayColInput" placeholder="COL OR FORMULA (E.G. BB OR =A+B)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
         <span style="width: 38px;"></span>
       </div>
 
@@ -289,8 +291,8 @@
       <!-- TOTAL DEDUCTIONS COLUMN MAPPING -->
       <div class="mapping-row" style="cursor: default; background: #fff3e0; margin-bottom: 15px;">
         <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL DEDUCTIONS" readonly style="flex: 3.2; font-weight: bold; background: #ffe0b2; font-size: 12px; color: #e65100;">
-        <input type="text" id="totalDeductionsColInput" placeholder="EXCEL COL" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <input type="text" value="TOTAL DEDUCTIONS" readonly style="flex: 3; font-weight: bold; background: #ffe0b2; font-size: 12px; color: #e65100;">
+        <input type="text" id="totalDeductionsColInput" placeholder="COL OR FORMULA (E.G. DO OR =A1+A2)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
         <span style="width: 38px;"></span>
       </div>
 
@@ -304,8 +306,8 @@
       <!-- TOTAL ADJUSTMENTS COLUMN MAPPING -->
       <div class="mapping-row" style="cursor: default; background: #f3e5f5; margin-bottom: 15px;">
         <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL ADJUSTMENTS" readonly style="flex: 3.2; font-weight: bold; background: #e1bee7; font-size: 12px; color: #6a1b9a;">
-        <input type="text" id="totalAdjustmentsColInput" placeholder="EXCEL COL" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <input type="text" value="TOTAL ADJUSTMENTS" readonly style="flex: 3; font-weight: bold; background: #e1bee7; font-size: 12px; color: #6a1b9a;">
+        <input type="text" id="totalAdjustmentsColInput" placeholder="COL OR FORMULA" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
         <span style="width: 38px;"></span>
       </div>
 
@@ -315,8 +317,8 @@
       </div>
       <div class="mapping-row" style="cursor: default; background: #e8f5e9;">
         <span style="width: 25px;"></span>
-        <input type="text" value="NET PAY" readonly style="flex: 3.2; font-weight: bold; background: #c8e6c9; font-size: 12px; color: #1b5e20;">
-        <input type="text" id="netPayColInput" placeholder="EXCEL COL (E.G. BD)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <input type="text" value="NET PAY" readonly style="flex: 3; font-weight: bold; background: #c8e6c9; font-size: 12px; color: #1b5e20;">
+        <input type="text" id="netPayColInput" placeholder="COL OR FORMULA (E.G. BD)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
         <span style="width: 38px;"></span>
       </div>
 
@@ -601,6 +603,57 @@
       return cell ? cell.v : null;
     }
 
+    /* --- EXCEL FORMULA EVALUATION ENGINE --- */
+    function evaluateFormulaOrCol(inputExpr, worksheet, rowNumber) {
+      if (!inputExpr) return 0;
+      let expr = String(inputExpr).trim();
+      if (!expr) return 0;
+
+      // Strip leading '=' if user entered an Excel style formula
+      if (expr.startsWith('=')) {
+        expr = expr.substring(1).trim();
+      }
+
+      // Single standard column letter (e.g. "AQ" or "A")
+      if (/^[A-Za-z]+$/.test(expr)) {
+        return parseExcelNum(getCellValue(worksheet, expr, rowNumber));
+      }
+
+      // Extract all potential column tokens (e.g., A, A1, AQ, DB5)
+      const colTokens = expr.match(/\b[A-Za-z]+[0-9]*\b/g) || [];
+      const uniqueCols = [...new Set(colTokens.map(t => t.replace(/[0-9]/g, '').toUpperCase()))];
+
+      // Limit check: Up to 5 columns allowed
+      if (uniqueCols.length > 5) {
+        console.warn("Formula exceeds 5 unique column limit:", expr);
+        return 0;
+      }
+
+      let evalExpr = expr.toUpperCase();
+
+      // Replace column identifiers with fetched numeric cell values for current employee row
+      colTokens.forEach(token => {
+        const colLetter = token.replace(/[0-9]/g, '');
+        const cellVal = parseExcelNum(getCellValue(worksheet, colLetter, rowNumber));
+        const tokenRegex = new RegExp('\\b' + token.toUpperCase() + '\\b', 'g');
+        evalExpr = evalExpr.replace(tokenRegex, cellVal < 0 ? `(${cellVal})` : cellVal);
+      });
+
+      // Security check: Only allow basic arithmetic characters
+      if (!/^[0-9.+\-*/()\s]+$/.test(evalExpr)) {
+        console.warn("Formula contains unsupported characters:", evalExpr);
+        return 0;
+      }
+
+      try {
+        const result = new Function(`"use strict"; return (${evalExpr})`)();
+        return (isNaN(result) || !isFinite(result)) ? 0 : result;
+      } catch (err) {
+        console.error("Error evaluating formula:", expr, err);
+        return 0;
+      }
+    }
+
     auth.onAuthStateChanged(user => {
       if (user) {
         document.getElementById("landingCard").style.display = "none";
@@ -727,8 +780,8 @@
         <span class="drag-handle" title="Drag to reorder">☰</span>
         <input type="text" class="map-input-name" placeholder="TYPE NAME (E.G. REGULAR DAYS)" value="${label}">
         <input type="text" class="map-input-unit" placeholder="UNIT (E.G. DAYS)" value="${unit}">
-        <input type="text" class="map-input-col map-input-qty" placeholder="QTY COL (E.G. AQ)" value="${qtyCol}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="AMT COL (E.G. AS)" value="${amtCol}">
+        <input type="text" class="map-input-col map-input-qty" placeholder="QTY COL / FORMULA" value="${qtyCol}">
+        <input type="text" class="map-input-col map-input-amt" placeholder="AMT COL / FORMULA" value="${amtCol}">
         <button class="btn-icon-danger" onclick="removeMappingRow(this)" title="Delete Slot">×</button>
       `;
 
@@ -752,9 +805,9 @@
 
       row.innerHTML = `
         <span class="drag-handle" title="Drag to reorder">☰</span>
-        <input type="text" class="map-input-name" placeholder="ITEM NAME" value="${label}" style="flex: 2.5;">
+        <input type="text" class="map-input-name" placeholder="ITEM NAME" value="${label}" style="flex: 2.2;">
         <input type="text" class="map-input-unit" placeholder="UNIT" value="${unit}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="EXCEL COL" value="${col}">
+        <input type="text" class="map-input-col map-input-amt" placeholder="COL OR FORMULA (E.G. =A1+A2)" value="${col}">
         <button class="btn-icon-danger" onclick="removeMappingRow(this)" title="Delete Slot">×</button>
       `;
 
@@ -857,14 +910,14 @@
 
       try {
         await db.collection("clients").doc(currentMappingClientId).set({ mapping: mappingData }, { merge: true });
-        alert("Custom Column Mapping saved successfully!");
+        alert("Custom Column Mapping & Formulas saved successfully!");
         closeMappingModal();
       } catch (err) {
         alert("Error saving mapping: " + err.message);
       }
     }
 
-    /* --- PAYSLIP PREVIEW (NUMBERS ONLY / NO PESO SIGN) --- */
+    /* --- PAYSLIP PREVIEW --- */
     function openPayslipPreview() {
       const client = clientsList.find(c => c.id === currentMappingClientId);
       
@@ -1130,29 +1183,32 @@
         const rawId = String(getCellValue(worksheet, empIdCol, r) || getCellValue(worksheet, "F", r) || getCellValue(worksheet, "A", r) || "").trim();
         if (!rawId) continue;
 
+        // Formula Evaluation for Earnings Qty & Amount
         const earningsItems = earningsSchema.map(item => ({
           label: item.label,
           unit: item.unit,
           qtyCol: item.qtyCol,
           amtCol: item.amtCol,
-          qtyVal: parseExcelNum(getCellValue(worksheet, item.qtyCol, r)),
-          amtVal: parseExcelNum(getCellValue(worksheet, item.amtCol, r))
+          qtyVal: evaluateFormulaOrCol(item.qtyCol, worksheet, r),
+          amtVal: evaluateFormulaOrCol(item.amtCol, worksheet, r)
         }));
 
+        // Formula Evaluation for Deductions
         const deductionItems = deductionsSchema.map(item => ({
           label: item.label,
           unit: item.unit,
           col: item.col,
-          val: parseExcelNum(getCellValue(worksheet, item.col, r))
+          val: evaluateFormulaOrCol(item.col, worksheet, r)
         }));
 
         let calculatedDeductions = 0;
         deductionItems.forEach(d => calculatedDeductions += d.val);
-        const finalTotalDeductions = totalDeductionsCol ? parseExcelNum(getCellValue(worksheet, totalDeductionsCol, r)) : calculatedDeductions;
+        const finalTotalDeductions = totalDeductionsCol ? evaluateFormulaOrCol(totalDeductionsCol, worksheet, r) : calculatedDeductions;
 
+        // Formula Evaluation for Adjustments
         let calculatedAdjustments = 0;
         const adjustmentItems = adjustmentsSchema.map(item => {
-          const val = parseExcelNum(getCellValue(worksheet, item.col, r));
+          const val = evaluateFormulaOrCol(item.col, worksheet, r);
           calculatedAdjustments += val;
           return {
             label: item.label,
@@ -1161,7 +1217,11 @@
             val: val
           };
         });
-        const finalTotalAdjustments = totalAdjustmentsCol ? parseExcelNum(getCellValue(worksheet, totalAdjustmentsCol, r)) : calculatedAdjustments;
+        const finalTotalAdjustments = totalAdjustmentsCol ? evaluateFormulaOrCol(totalAdjustmentsCol, worksheet, r) : calculatedAdjustments;
+
+        // Formula Evaluation for Gross & Net Take Home
+        const finalGrossPay = evaluateFormulaOrCol(grossPayCol, worksheet, r);
+        const finalNetPay = evaluateFormulaOrCol(netPayCol, worksheet, r);
 
         const payslipPayload = {
           empId: rawId,
@@ -1179,10 +1239,10 @@
           deductionItems: deductionItems,
           adjustmentItems: adjustmentItems,
 
-          grossPay: parseExcelNum(getCellValue(worksheet, grossPayCol, r)),
+          grossPay: finalGrossPay,
           totalDeductions: finalTotalDeductions,
           totalAdjustments: finalTotalAdjustments,
-          netPay: parseExcelNum(getCellValue(worksheet, netPayCol, r)),
+          netPay: finalNetPay,
 
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
