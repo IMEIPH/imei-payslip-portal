@@ -46,6 +46,7 @@
 
     /* MAPPING BUILDER STYLES */
     .mapping-section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; margin: 18px 0 8px 0; font-weight: bold; font-size: 13px; }
+    .header-info { background: #edf2f7; color: #2d3748; border-left: 4px solid #4a5568; }
     .header-earnings { background: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
     .header-gross { background: #bbdefb; color: #0d47a1; border-left: 4px solid #0d47a1; }
     .header-deductions { background: #fff3e0; color: #e65100; border-left: 4px solid #e65100; }
@@ -63,6 +64,15 @@
     .btn-icon-danger:hover { background: #feb2b2; }
 
     .duplicate-info-box { background: #fff5f5; border: 1px solid #feb2b2; padding: 12px; border-radius: 6px; margin: 15px 0; font-size: 13px; color: #9b2c2c; }
+
+    /* PREVIEW PAYSLIP STYLES */
+    .payslip-preview-card { border: 2px dashed #3182ce; padding: 20px; background: #fff; border-radius: 8px; margin-top: 15px; }
+    .payslip-header-box { border-bottom: 2px solid #2b6cb0; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }
+    .payslip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+    .payslip-table { width: 100%; border-collapse: collapse; }
+    .payslip-table th { background: #edf2f7; font-size: 11px; padding: 6px; text-align: left; }
+    .payslip-table td { padding: 6px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
+    .payslip-total-row { font-weight: bold; background: #f7fafc; }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -238,6 +248,21 @@
       <h3 id="mappingModalTitle" style="margin-top: 0; color: #2b6cb0;">Custom Column Mapping</h3>
       <p style="font-size: 12px; color: #718096; margin-bottom: 15px;">Customize item names, units, and column letters. Drag rows (☰) to reorder sequence within any category.</p>
 
+      <!-- 0. EMPLOYEE IDENTIFICATION MAPPING (TOP SECTION) -->
+      <div class="mapping-section-header header-info">
+        <span>EMPLOYEE IDENTIFICATION MAPPING</span>
+      </div>
+      <div style="display: flex; gap: 10px; background: #f8fafc; border: 1px solid #cbd5e0; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+        <div style="flex: 1;">
+          <label style="font-size: 11px; margin-bottom: 3px;">EMPLOYEE ID COLUMN</label>
+          <input type="text" id="empIdColInput" placeholder="EXCEL COL (E.G. F or A)" style="text-transform: uppercase; font-weight: bold; text-align: center;">
+        </div>
+        <div style="flex: 1;">
+          <label style="font-size: 11px; margin-bottom: 3px;">EMPLOYEE NAME COLUMN</label>
+          <input type="text" id="empNameColInput" placeholder="EXCEL COL (E.G. G)" style="text-transform: uppercase; font-weight: bold; text-align: center;">
+        </div>
+      </div>
+
       <!-- 1. EARNINGS SECTION -->
       <div class="mapping-section-header header-earnings">
         <span>EARNINGS SECTION</span>
@@ -280,9 +305,112 @@
         <span style="width: 38px;"></span>
       </div>
 
-      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
-        <button onclick="closeMappingModal()" style="background: #a0aec0;">CANCEL</button>
-        <button class="btn-success" onclick="saveClientMapping()">SAVE MAPPING</button>
+      <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 25px;">
+        <button class="btn-warning" onclick="openPayslipPreview()">👁️ PREVIEW PAYSLIP VIEW</button>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="closeMappingModal()" style="background: #a0aec0;">CANCEL</button>
+          <button class="btn-success" onclick="saveClientMapping()">SAVE MAPPING</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYSLIP ACTUAL VIEW PREVIEW MODAL -->
+  <div id="previewModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 900px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">
+        <h3 style="margin: 0; color: #2b6cb0;">EMPLOYEE PAYSLIP LIVE PREVIEW</h3>
+        <button class="btn-dark" style="padding: 4px 10px; font-size: 12px;" onclick="closePayslipPreview()">CLOSE PREVIEW</button>
+      </div>
+
+      <p style="font-size: 12px; color: #718096; margin-bottom: 15px;">
+        This is how the payslip layout will render on the employee side using your current mapping setup:
+      </p>
+
+      <div class="payslip-preview-card">
+        <div class="payslip-header-box">
+          <h2 id="prevClientTitle" style="margin: 0; font-size: 18px; color: #1a202c;">COMPANY NAME HERE</h2>
+          <p style="margin: 5px 0 0 0; font-size: 13px; color: #4a5568;">PAYSLIP FOR PERIOD: 01/01/2026 - 01/15/2026</p>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; background: #edf2f7; padding: 10px 15px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-bottom: 15px;">
+          <div>EMPLOYEE ID: <span id="prevEmpId" style="color: #2b6cb0;">102938 (COL: F)</span></div>
+          <div>NAME: <span id="prevEmpName" style="color: #2b6cb0;">DELA CRUZ, JUAN (COL: G)</span></div>
+        </div>
+
+        <div class="payslip-grid">
+          <!-- EARNINGS TABLE -->
+          <div>
+            <h4 style="margin: 0 0 8px 0; color: #1565c0; border-bottom: 2px solid #90caf9;">EARNINGS</h4>
+            <table class="payslip-table">
+              <thead>
+                <tr>
+                  <th>ITEM</th>
+                  <th>UNIT</th>
+                  <th style="text-align: right;">AMOUNT / VALUE</th>
+                </tr>
+              </thead>
+              <tbody id="prevEarningsBody"></tbody>
+            </table>
+          </div>
+
+          <!-- DEDUCTIONS TABLE -->
+          <div>
+            <h4 style="margin: 0 0 8px 0; color: #e65100; border-bottom: 2px solid #ffcc80;">DEDUCTIONS</h4>
+            <table class="payslip-table">
+              <thead>
+                <tr>
+                  <th>ITEM</th>
+                  <th>UNIT</th>
+                  <th style="text-align: right;">AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody id="prevDeductionsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="payslip-grid">
+          <!-- ADJUSTMENTS TABLE -->
+          <div>
+            <h4 style="margin: 0 0 8px 0; color: #6a1b9a; border-bottom: 2px solid #ce93d8;">ADJUSTMENTS</h4>
+            <table class="payslip-table">
+              <thead>
+                <tr>
+                  <th>ITEM</th>
+                  <th>UNIT</th>
+                  <th style="text-align: right;">AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody id="prevAdjustmentsBody"></tbody>
+            </table>
+          </div>
+
+          <!-- PAY SUMMARY BOX -->
+          <div>
+            <h4 style="margin: 0 0 8px 0; color: #1b5e20; border-bottom: 2px solid #a5d6a7;">PAY SUMMARY</h4>
+            <table class="payslip-table">
+              <tbody>
+                <tr>
+                  <td><strong>TOTAL GROSS PAY</strong></td>
+                  <td style="text-align: right; font-weight: bold;" id="prevGrossVal">₱ 15,450.00</td>
+                </tr>
+                <tr>
+                  <td><strong>TOTAL DEDUCTIONS</strong></td>
+                  <td style="text-align: right; font-weight: bold; color: #c53030;" id="prevDedVal">₱ 1,200.00</td>
+                </tr>
+                <tr class="payslip-total-row" style="background: #e8f5e9;">
+                  <td style="font-size: 14px; color: #1b5e20;"><strong>NET TAKE HOME</strong></td>
+                  <td style="text-align: right; font-size: 14px; color: #1b5e20;" id="prevNetVal">₱ 14,250.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button class="btn-dark" onclick="closePayslipPreview()">BACK TO MAPPING</button>
       </div>
     </div>
   </div>
@@ -405,12 +533,11 @@
     let currentMappingClientId = null;
     let pendingPayrollWorksheet = null;
     let activeAuthorizedEmp = null;
-    let currentUploadFileData = null; // Stores filename and Base64 content
+    let currentUploadFileData = null;
     let allPendingRequests = [];
     let allEmployees = [];
     let draggedElement = null;
 
-    // Helper: Convert ArrayBuffer to Base64
     function arrayBufferToBase64(buffer) {
       let binary = '';
       const bytes = new Uint8Array(buffer);
@@ -543,6 +670,10 @@
 
       const mapping = client.mapping || {};
 
+      // Load ID and Name column inputs
+      document.getElementById("empIdColInput").value = mapping.empIdCol || "F";
+      document.getElementById("empNameColInput").value = mapping.empNameCol || "G";
+
       const earnings = (mapping.earnings && mapping.earnings.length > 0) ? mapping.earnings : DEFAULT_EARNINGS;
       const deductions = (mapping.deductions && mapping.deductions.length > 0) ? mapping.deductions : DEFAULT_DEDUCTIONS;
       const adjustments = (mapping.adjustments && mapping.adjustments.length > 0) ? mapping.adjustments : DEFAULT_ADJUSTMENTS;
@@ -649,6 +780,8 @@
       if (!currentMappingClientId) return;
 
       const mappingData = {
+        empIdCol: document.getElementById("empIdColInput").value.trim().toUpperCase(),
+        empNameCol: document.getElementById("empNameColInput").value.trim().toUpperCase(),
         earnings: extractSectionData("earningsList"),
         grossPayCol: document.getElementById("grossPayColInput").value.trim().toUpperCase(),
         deductions: extractSectionData("deductionsList"),
@@ -666,6 +799,59 @@
       }
     }
 
+    /* --- PAYSLIP PREVIEW FUNCTIONS --- */
+    function openPayslipPreview() {
+      const client = clientsList.find(c => c.id === currentMappingClientId);
+      document.getElementById("prevClientTitle").innerText = client ? client.name : "CLIENT NAME";
+
+      const empIdCol = document.getElementById("empIdColInput").value.trim().toUpperCase() || "F";
+      const empNameCol = document.getElementById("empNameColInput").value.trim().toUpperCase() || "G";
+
+      document.getElementById("prevEmpId").innerText = `102938 (COL: ${empIdCol})`;
+      document.getElementById("prevEmpName").innerText = `DELA CRUZ, JUAN (COL: ${empNameCol})`;
+
+      const earnings = extractSectionData("earningsList");
+      const deductions = extractSectionData("deductionsList");
+      const adjustments = extractSectionData("adjustmentsList");
+
+      renderPreviewTable("prevEarningsBody", earnings);
+      renderPreviewTable("prevDeductionsBody", deductions);
+      renderPreviewTable("prevAdjustmentsBody", adjustments);
+
+      const grossCol = document.getElementById("grossPayColInput").value.trim().toUpperCase() || "BB";
+      const netCol = document.getElementById("netPayColInput").value.trim().toUpperCase() || "BD";
+
+      document.getElementById("prevGrossVal").innerText = `₱ 15,450.00 (COL: ${grossCol})`;
+      document.getElementById("prevDedVal").innerText = `₱ 1,200.00`;
+      document.getElementById("prevNetVal").innerText = `₱ 14,250.00 (COL: ${netCol})`;
+
+      document.getElementById("previewModal").style.display = "flex";
+    }
+
+    function renderPreviewTable(targetId, items) {
+      const tbody = document.getElementById(targetId);
+      tbody.innerHTML = "";
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #a0aec0;">No mapped items.</td></tr>`;
+        return;
+      }
+      items.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${item.label || "---"}</strong></td>
+          <td style="color: #718096; font-size: 11px;">${item.unit || "AMOUNT"}</td>
+          <td style="text-align: right; font-weight: bold;">
+            ₱ 1,500.00 <span style="font-size: 10px; color: #2b6cb0;">(${item.col})</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function closePayslipPreview() {
+      document.getElementById("previewModal").style.display = "none";
+    }
+
     /* --- STRICT FORM VALIDATION FOR UPLOAD AUTHORIZATION --- */
     async function verifyAuthorizationAndUpload() {
       const clientId = document.getElementById("authClientSelect").value;
@@ -675,7 +861,6 @@
       const empId = document.getElementById("authIdInput").value.trim();
       const pin = document.getElementById("authPinInput").value.trim();
 
-      // Check missing inputs
       let missingFields = [];
       if (!clientId) missingFields.push("Select Company / Client");
       if (!payrollDate) missingFields.push("Payroll Day Box (Month-Day-Year)");
@@ -722,7 +907,6 @@
         try {
           const arrayBuffer = e.target.result;
           
-          // Store filename and Base64 content for history downloading
           currentUploadFileData = {
             fileName: file.name,
             fileBase64: arrayBufferToBase64(arrayBuffer)
@@ -823,6 +1007,8 @@
       const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
       const mapping = (clientObj && clientObj.mapping) ? clientObj.mapping : {};
 
+      const empIdCol = mapping.empIdCol || "F";
+      const empNameCol = mapping.empNameCol || "G";
       const earningsSchema = mapping.earnings || DEFAULT_EARNINGS;
       const deductionsSchema = mapping.deductions || DEFAULT_DEDUCTIONS;
       const adjustmentsSchema = mapping.adjustments || DEFAULT_ADJUSTMENTS;
@@ -838,10 +1024,11 @@
       let totalUploaded = 0;
 
       for (let r = 8; r <= totalRows; r++) {
-        const empName = String(getCellValue(worksheet, "G", r) || "").trim();
+        // Extract Name and ID dynamically using mapped columns
+        const empName = String(getCellValue(worksheet, empNameCol, r) || getCellValue(worksheet, "G", r) || "").trim();
         if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
 
-        const rawId = String(getCellValue(worksheet, "A", r) || "").trim();
+        const rawId = String(getCellValue(worksheet, empIdCol, r) || getCellValue(worksheet, "F", r) || getCellValue(worksheet, "A", r) || "").trim();
         if (!rawId) continue;
 
         const earningsItems = earningsSchema.map(item => ({
@@ -911,7 +1098,7 @@
       }, { merge: true });
       count++;
 
-      // LOG HISTORY ENTRY WITH CLEAN FIELDMAPPING & FILE DATA
+      // LOG HISTORY ENTRY
       const historyRef = db.collection("payroll_history").doc();
       batch.set(historyRef, {
         uploaderId: uploaderId,
