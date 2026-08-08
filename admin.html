@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Portal - Payroll, Mapping & Audit History</title>
+  <title>Admin Portal - Payroll, Mapping & Whitelist Management</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f7fafc; padding: 20px; display: flex; justify-content: center; }
@@ -28,6 +28,10 @@
 
     .excel-toolbar { background: #ebf8ff; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 12px; }
     .excel-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* WHITELIST PANEL STYLES */
+    .whitelist-panel { display: none; background: #f0fff4; border: 1px solid #c6f6d5; padding: 15px; border-radius: 8px; margin-top: 10px; flex-direction: column; gap: 12px; }
+    .whitelist-table-container { max-height: 250px; overflow-y: auto; background: white; border: 1px solid #cbd5e0; border-radius: 6px; margin-top: 8px; }
 
     #uploadProgressContainer { display: none; background: #fffaf0; border: 1px solid #fbd38d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     progress { width: 100%; height: 20px; margin-top: 10px; }
@@ -192,6 +196,40 @@
         <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleFileSelected()">
         <button class="btn-success" onclick="triggerExcelUpload()">UPLOAD EMPLOYEES (ID & PIN)</button>
         <button class="btn-dark" onclick="downloadEmployeeExcel()">DOWNLOAD ALL PINs</button>
+        <button class="btn-warning" onclick="toggleWhitelistPanel()">WHITELIST</button>
+      </div>
+
+      <!-- WHITELIST EXPANDABLE PANEL -->
+      <div id="whitelistPanel" class="whitelist-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong style="color: #276749;">WHITELIST MANAGEMENT</strong>
+          <span style="font-size: 11px; color: #4a5568;">Only whitelisted IDs are allowed to self-register</span>
+        </div>
+
+        <div class="excel-actions">
+          <input type="file" id="whitelistFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleWhitelistUpload()">
+          <button class="btn-success" onclick="triggerWhitelistUpload()">UPLOAD WHITELIST</button>
+          <button class="btn-dark" onclick="manuallyAddWhitelist()">ADD WHITELIST</button>
+          <button class="btn-warning" onclick="downloadWhitelistExcel()">DOWNLOAD WHITELIST</button>
+        </div>
+
+        <div style="margin-top: 5px;">
+          <input type="text" id="whitelistSearchInput" placeholder="Search Whitelisted ID Number..." onkeyup="filterWhitelistTable()">
+        </div>
+
+        <div class="whitelist-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>WHITELISTED ID NUMBER</th>
+                <th style="text-align: right;">ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="whitelistTableBody">
+              <tr><td colspan="2" style="text-align: center;">Loading whitelist...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -206,21 +244,6 @@
       <label>SEARCH ALL RECORDS</label>
       <input type="text" id="searchInput" placeholder="Search Employee ID or Name across lists..." onkeyup="filterAllTables()">
     </div>
-
-    <!-- PENDING PIN REQUESTS -->
-    <div class="section-title">Pending PIN Change Requests</div>
-    <table>
-      <thead>
-        <tr>
-          <th>EMPLOYEE ID</th>
-          <th>REQUESTED PIN</th>
-          <th style="text-align: right;">ACTION</th>
-        </tr>
-      </thead>
-      <tbody id="pendingBody">
-        <tr><td colspan="3" style="text-align: center;">Loading requests...</td></tr>
-      </tbody>
-    </table>
 
     <!-- REGISTERED EMPLOYEES & PERMISSIONS -->
     <div class="section-title">Registered Employees & Permissions</div>
@@ -549,9 +572,15 @@
     let pendingPayrollWorksheet = null;
     let activeAuthorizedEmp = null;
     let currentUploadFileData = null;
-    let allPendingRequests = [];
     let allEmployees = [];
+    let allWhitelistedRecords = [];
     let draggedElement = null;
+
+    // Helper: Remove hyphens and whitespace to unify ID representation
+    function cleanEmpId(id) {
+      if (!id) return '';
+      return String(id).replace(/[-\s]/g, '').trim().toUpperCase();
+    }
 
     function arrayBufferToBase64(buffer) {
       let binary = '';
@@ -609,21 +638,17 @@
       let expr = String(inputExpr).trim();
       if (!expr) return 0;
 
-      // Strip leading '=' if user entered an Excel style formula
       if (expr.startsWith('=')) {
         expr = expr.substring(1).trim();
       }
 
-      // Single standard column letter (e.g. "AQ" or "A")
       if (/^[A-Za-z]+$/.test(expr)) {
         return parseExcelNum(getCellValue(worksheet, expr, rowNumber));
       }
 
-      // Extract all potential column tokens (e.g., A, A1, AQ, DB5)
       const colTokens = expr.match(/\b[A-Za-z]+[0-9]*\b/g) || [];
       const uniqueCols = [...new Set(colTokens.map(t => t.replace(/[0-9]/g, '').toUpperCase()))];
 
-      // Limit check: Up to 5 columns allowed
       if (uniqueCols.length > 5) {
         console.warn("Formula exceeds 5 unique column limit:", expr);
         return 0;
@@ -631,7 +656,6 @@
 
       let evalExpr = expr.toUpperCase();
 
-      // Replace column identifiers with fetched numeric cell values for current employee row
       colTokens.forEach(token => {
         const colLetter = token.replace(/[0-9]/g, '');
         const cellVal = parseExcelNum(getCellValue(worksheet, colLetter, rowNumber));
@@ -639,7 +663,6 @@
         evalExpr = evalExpr.replace(tokenRegex, cellVal < 0 ? `(${cellVal})` : cellVal);
       });
 
-      // Security check: Only allow basic arithmetic characters
       if (!/^[0-9.+\-*/()\s]+$/.test(evalExpr)) {
         console.warn("Formula contains unsupported characters:", evalExpr);
         return 0;
@@ -661,8 +684,8 @@
         document.getElementById("uploadAuthCard").style.display = "none";
         document.getElementById("adminDashboard").style.display = "block";
         loadClients();
-        loadPendingRequests();
         loadEmployees();
+        loadWhitelist();
       } else {
         showLandingScreen();
       }
@@ -732,6 +755,201 @@
     async function deleteClient(id) {
       if (confirm("Delete this client and its column mappings?")) {
         await db.collection("clients").doc(id).delete();
+      }
+    }
+
+    /* --- WHITELIST MANAGEMENT MODULE --- */
+    function toggleWhitelistPanel() {
+      const panel = document.getElementById("whitelistPanel");
+      if (panel.style.display === "flex") {
+        panel.style.display = "none";
+      } else {
+        panel.style.display = "flex";
+      }
+    }
+
+    function loadWhitelist() {
+      db.collection("whitelist").onSnapshot(snapshot => {
+        allWhitelistedRecords = [];
+        snapshot.forEach(doc => {
+          allWhitelistedRecords.push({ id: doc.id, ...doc.data() });
+        });
+        renderWhitelistTable(allWhitelistedRecords);
+      });
+    }
+
+    function renderWhitelistTable(list) {
+      const tbody = document.getElementById("whitelistTableBody");
+      tbody.innerHTML = "";
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No Whitelisted IDs found.</td></tr>`;
+        return;
+      }
+      list.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${item.displayId || item.id}</strong></td>
+          <td style="text-align: right;">
+            <button class="btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteWhitelistId('${item.id}')">REMOVE</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterWhitelistTable() {
+      const q = cleanEmpId(document.getElementById("whitelistSearchInput").value);
+      const filtered = allWhitelistedRecords.filter(item => {
+        return cleanEmpId(item.id).includes(q) || cleanEmpId(item.displayId || '').includes(q);
+      });
+      renderWhitelistTable(filtered);
+    }
+
+    function triggerWhitelistUpload() {
+      document.getElementById("whitelistFileInput").click();
+    }
+
+    async function handleWhitelistUpload() {
+      const fileInput = document.getElementById("whitelistFileInput");
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array', raw: false });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+          const parsedIds = [];
+          const seenCleanedIds = new Set();
+          let duplicatesFound = false;
+
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            const rawVal = String(row[0] || "").trim();
+            if (!rawVal || rawVal.toUpperCase() === "ID" || rawVal.toUpperCase() === "EMPLOYEE ID") continue;
+
+            const cleaned = cleanEmpId(rawVal);
+            if (!cleaned) continue;
+
+            // Check for internal duplicate inside uploaded file
+            if (seenCleanedIds.has(cleaned)) {
+              duplicatesFound = true;
+              break;
+            }
+            seenCleanedIds.add(cleaned);
+            parsedIds.push({ raw: rawVal, clean: cleaned });
+          }
+
+          if (duplicatesFound) {
+            alert("UPLOAD REJECTED: The Excel file contains duplicate Employee IDs (ignoring hyphens/spaces). Please clean the list and try again.");
+            fileInput.value = "";
+            return;
+          }
+
+          if (parsedIds.length === 0) {
+            alert("UPLOAD REJECTED: No valid ID numbers found in Column A.");
+            fileInput.value = "";
+            return;
+          }
+
+          if (!confirm(`Uploading will OVERWRITE the current whitelist with ${parsedIds.length} new IDs. Do you want to proceed?`)) {
+            fileInput.value = "";
+            return;
+          }
+
+          // Step 1: Wipe all old whitelist documents
+          const existingSnapshot = await db.collection("whitelist").get();
+          let deleteBatch = db.batch();
+          let delCount = 0;
+          existingSnapshot.forEach(doc => {
+            deleteBatch.delete(doc.ref);
+            delCount++;
+            if (delCount === 400) {
+              deleteBatch.commit();
+              deleteBatch = db.batch();
+              delCount = 0;
+            }
+          });
+          if (delCount > 0) await deleteBatch.commit();
+
+          // Step 2: Save new whitelist IDs
+          let writeBatch = db.batch();
+          let writeCount = 0;
+
+          for (const item of parsedIds) {
+            const docRef = db.collection("whitelist").doc(item.clean);
+            writeBatch.set(docRef, {
+              displayId: item.raw,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            writeCount++;
+            if (writeCount === 400) {
+              await writeBatch.commit();
+              writeBatch = db.batch();
+              writeCount = 0;
+            }
+          }
+          if (writeCount > 0) await writeBatch.commit();
+
+          alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedIds.length} IDs uploaded.`);
+          fileInput.value = "";
+
+        } catch (err) {
+          alert("Error processing whitelist file: " + err.message);
+          fileInput.value = "";
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function manuallyAddWhitelist() {
+      const input = prompt("Enter Employee ID to Whitelist:");
+      if (!input) return;
+
+      const rawVal = input.trim();
+      const cleaned = cleanEmpId(rawVal);
+
+      if (!cleaned) return alert("Invalid ID number.");
+
+      const existingDoc = await db.collection("whitelist").doc(cleaned).get();
+      if (existingDoc.exists) {
+        return alert(`REJECTED: ID Number '${rawVal}' is ALREADY present in the whitelist.`);
+      }
+
+      await db.collection("whitelist").doc(cleaned).set({
+        displayId: rawVal,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      alert(`ID '${rawVal}' successfully added to whitelist!`);
+    }
+
+    async function deleteWhitelistId(docId) {
+      if (confirm(`Remove ID '${docId}' from Whitelist?`)) {
+        await db.collection("whitelist").doc(docId).delete();
+      }
+    }
+
+    async function downloadWhitelistExcel() {
+      try {
+        const excelData = [["WHITELISTED EMPLOYEE ID"]];
+        const snapshot = await db.collection("whitelist").get();
+        snapshot.forEach(doc => {
+          excelData.push([doc.data().displayId || doc.id]);
+        });
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Whitelist");
+        XLSX.writeFile(workbook, "Whitelist_Export.xlsx");
+      } catch (err) {
+        alert("Error exporting whitelist: " + err.message);
       }
     }
 
@@ -1016,7 +1234,7 @@
       const payrollDate = document.getElementById("authPayrollDate").value;
       const periodFrom = document.getElementById("authPeriodFrom").value;
       const periodTo = document.getElementById("authPeriodTo").value;
-      const empId = document.getElementById("authIdInput").value.trim();
+      const rawEmpId = document.getElementById("authIdInput").value.trim();
       const pin = document.getElementById("authPinInput").value.trim();
 
       let missingFields = [];
@@ -1024,7 +1242,7 @@
       if (!payrollDate) missingFields.push("Payroll Date Box (Month-Day-Year)");
       if (!periodFrom) missingFields.push("Payroll Period Box (From Date)");
       if (!periodTo) missingFields.push("Payroll Period Box (Up To Date)");
-      if (!empId) missingFields.push("Employee ID");
+      if (!rawEmpId) missingFields.push("Employee ID");
       if (!pin) missingFields.push("PIN");
 
       if (missingFields.length > 0) {
@@ -1033,7 +1251,8 @@
       }
 
       try {
-        const empDoc = await db.collection("employees").doc(empId).get();
+        const cleanedId = cleanEmpId(rawEmpId);
+        const empDoc = await db.collection("employees").doc(cleanedId).get();
         if (!empDoc.exists) return alert("AUTHORIZATION FAILED: Invalid Employee ID.");
 
         const empData = empDoc.data();
@@ -1043,7 +1262,7 @@
         const clientObj = clientsList.find(c => c.id === clientId);
 
         activeAuthorizedEmp = { 
-          id: empId, 
+          id: cleanedId, 
           clientId: clientId,
           clientName: clientObj ? clientObj.name : "CLIENT",
           payrollDate: payrollDate,
@@ -1139,7 +1358,8 @@
       }
 
       try {
-        const empDoc = await db.collection("employees").doc(authId).get();
+        const cleanedId = cleanEmpId(authId);
+        const empDoc = await db.collection("employees").doc(cleanedId).get();
         if (!empDoc.exists) return alert("REJECTED: Employee ID not found.");
 
         const empData = empDoc.data();
@@ -1147,7 +1367,7 @@
         if (empData.canOverride !== true) return alert("REJECTED: This ID does not have Override permissions.");
 
         document.getElementById("overrideAuthModal").style.display = "none";
-        await executePayrollProcessing(pendingPayrollWorksheet, "OVERRIDE", authId);
+        await executePayrollProcessing(pendingPayrollWorksheet, "OVERRIDE", cleanedId);
         pendingPayrollWorksheet = null;
 
       } catch (err) {
@@ -1181,9 +1401,9 @@
         if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
 
         const rawId = String(getCellValue(worksheet, empIdCol, r) || getCellValue(worksheet, "F", r) || getCellValue(worksheet, "A", r) || "").trim();
-        if (!rawId) continue;
+        const cleanedId = cleanEmpId(rawId);
+        if (!cleanedId) continue;
 
-        // Formula Evaluation for Earnings Qty & Amount
         const earningsItems = earningsSchema.map(item => ({
           label: item.label,
           unit: item.unit,
@@ -1193,7 +1413,6 @@
           amtVal: evaluateFormulaOrCol(item.amtCol, worksheet, r)
         }));
 
-        // Formula Evaluation for Deductions
         const deductionItems = deductionsSchema.map(item => ({
           label: item.label,
           unit: item.unit,
@@ -1205,7 +1424,6 @@
         deductionItems.forEach(d => calculatedDeductions += d.val);
         const finalTotalDeductions = totalDeductionsCol ? evaluateFormulaOrCol(totalDeductionsCol, worksheet, r) : calculatedDeductions;
 
-        // Formula Evaluation for Adjustments
         let calculatedAdjustments = 0;
         const adjustmentItems = adjustmentsSchema.map(item => {
           const val = evaluateFormulaOrCol(item.col, worksheet, r);
@@ -1219,12 +1437,12 @@
         });
         const finalTotalAdjustments = totalAdjustmentsCol ? evaluateFormulaOrCol(totalAdjustmentsCol, worksheet, r) : calculatedAdjustments;
 
-        // Formula Evaluation for Gross & Net Take Home
         const finalGrossPay = evaluateFormulaOrCol(grossPayCol, worksheet, r);
         const finalNetPay = evaluateFormulaOrCol(netPayCol, worksheet, r);
 
         const payslipPayload = {
-          empId: rawId,
+          empId: cleanedId,
+          rawEmpId: rawId,
           empName: empName,
           agencyName: "INT'L. MANPOWER ESSENTIALS, INC.",
           clientName: activeAuthorizedEmp.clientName,
@@ -1247,7 +1465,7 @@
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        const docRef = db.collection("payslips").doc(rawId);
+        const docRef = db.collection("payslips").doc(cleanedId);
         batch.set(docRef, payslipPayload, { merge: true });
 
         count++;
@@ -1260,7 +1478,6 @@
         }
       }
 
-      // WRITE BATCH RECORD
       const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
       const batchRef = db.collection("payroll_batches").doc(batchId);
       batch.set(batchRef, {
@@ -1272,7 +1489,6 @@
       }, { merge: true });
       count++;
 
-      // LOG HISTORY ENTRY
       const historyRef = db.collection("payroll_history").doc();
       batch.set(historyRef, {
         uploaderId: uploaderId,
@@ -1409,17 +1625,19 @@
 
             const rawId = String(row[0] || "").trim();
             const rawPin = String(row[1] || "").trim();
+            const cleanedId = cleanEmpId(rawId);
 
-            if (!rawId || !rawPin) continue;
+            if (!cleanedId || !rawPin) continue;
 
             if (!/^\d{6}$/.test(rawPin)) {
               invalidPins++;
               continue;
             }
 
-            const docRef = db.collection("employees").doc(rawId);
+            const docRef = db.collection("employees").doc(cleanedId);
             batch.set(docRef, {
-              empId: rawId,
+              empId: cleanedId,
+              displayId: rawId,
               pin: rawPin,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
@@ -1455,7 +1673,7 @@
         const excelData = [["ID", "PIN"]];
         const snapshot = await db.collection("employees").get();
         snapshot.forEach(doc => {
-          excelData.push([doc.id, String(doc.data().pin || "")]);
+          excelData.push([doc.data().displayId || doc.id, String(doc.data().pin || "")]);
         });
         const worksheet = XLSX.utils.aoa_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
@@ -1464,45 +1682,6 @@
       } catch (err) {
         alert("Error: " + err.message);
       }
-    }
-
-    function loadPendingRequests() {
-      db.collection("registration_requests").onSnapshot(snapshot => {
-        allPendingRequests = [];
-        snapshot.forEach(doc => allPendingRequests.push({ reqId: doc.id, ...doc.data() }));
-        renderPendingRequests(allPendingRequests);
-      });
-    }
-
-    function renderPendingRequests(list) {
-      const tbody = document.getElementById("pendingBody");
-      tbody.innerHTML = "";
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #718096;">No requests.</td></tr>`;
-        return;
-      }
-      list.forEach(req => {
-        const empId = req.empId || req.reqId;
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${empId}</strong></td>
-          <td><span class="pin-badge">${req.pin}</span></td>
-          <td style="text-align: right;">
-            <button class="btn-warning" onclick="grantPinChange('${empId}', '${req.pin}')">GRANT</button>
-            <button class="btn-danger" onclick="rejectRequest('${empId}')">REJECT</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function grantPinChange(empId, newPin) {
-      await db.collection("employees").doc(empId).set({ pin: String(newPin) }, { merge: true });
-      await db.collection("registration_requests").doc(empId).delete();
-    }
-
-    async function rejectRequest(empId) {
-      await db.collection("registration_requests").doc(empId).delete();
     }
 
     function loadEmployees() {
@@ -1523,8 +1702,9 @@
       list.forEach(emp => {
         const tr = document.createElement("tr");
         const canOverride = emp.canOverride === true;
+        const displayId = emp.displayId || emp.empId;
         tr.innerHTML = `
-          <td><strong>${emp.empId}</strong></td>
+          <td><strong>${displayId}</strong></td>
           <td>${emp.empName || "---"}</td>
           <td><span class="pin-badge">${emp.pin || "NO PIN"}</span></td>
           <td>
@@ -1553,9 +1733,10 @@
     }
 
     function filterAllTables() {
-      const q = document.getElementById("searchInput").value.trim().toUpperCase();
-      renderPendingRequests(allPendingRequests.filter(r => (r.empId || r.reqId).toUpperCase().includes(q)));
-      renderEmployees(allEmployees.filter(e => e.empId.toUpperCase().includes(q) || (e.empName || "").toUpperCase().includes(q)));
+      const q = cleanEmpId(document.getElementById("searchInput").value);
+      renderEmployees(allEmployees.filter(e => {
+        return cleanEmpId(e.empId).includes(q) || cleanEmpId(e.displayId || '').includes(q) || (e.empName || "").toUpperCase().includes(q);
+      }));
     }
   </script>
 </body>
