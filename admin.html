@@ -3,524 +3,145 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Portal - Payroll, Mapping & Whitelist Management</title>
+  <title>Admin - Payroll Upload Portal</title>
+  
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f7fafc; padding: 20px; display: flex; justify-content: center; }
-    .container { width: 100%; max-width: 1000px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    
-    .input-group { margin-bottom: 15px; }
-    label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 13px; text-transform: uppercase; }
-    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; background: #fff; }
-    
-    button { padding: 10px 16px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-    button:hover { background: #2b6cb0; }
-    .btn-danger { background: #e53e3e; } .btn-danger:hover { background: #c53030; }
-    .btn-success { background: #38a169; } .btn-success:hover { background: #2f855a; }
-    .btn-warning { background: #dd6b20; } .btn-warning:hover { background: #c05621; }
-    .btn-dark { background: #4a5568; } .btn-dark:hover { background: #2d3748; }
-
-    #landingCard, #loginCard, #uploadAuthCard { max-width: 480px; margin: 40px auto; }
-    #adminDashboard, #loginCard, #uploadAuthCard { display: none; }
-    
-    .dashboard-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px; }
-    .section-title { background: #edf2f7; padding: 10px; font-weight: bold; color: #2d3748; border-radius: 6px; margin-top: 25px; margin-bottom: 15px; font-size: 14px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
-
-    .excel-toolbar { background: #ebf8ff; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 12px; }
-    .excel-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    /* WHITELIST PANEL STYLES */
-    .whitelist-panel { display: none; background: #f0fff4; border: 1px solid #c6f6d5; padding: 15px; border-radius: 8px; margin-top: 10px; flex-direction: column; gap: 12px; }
-    .whitelist-table-container { max-height: 250px; overflow-y: auto; background: white; border: 1px solid #cbd5e0; border-radius: 6px; margin-top: 8px; }
-
-    #uploadProgressContainer { display: none; background: #fffaf0; border: 1px solid #fbd38d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    progress { width: 100%; height: 20px; margin-top: 10px; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th { background: #f7fafc; text-align: left; padding: 10px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #4a5568; text-transform: uppercase; }
-    td { padding: 10px; border-bottom: 1px solid #edf2f7; font-size: 13px; }
-    
-    .pin-badge { font-family: monospace; font-weight: bold; background: #edf2f7; padding: 4px 8px; border-radius: 4px; }
-    .status-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
-    .status-upload { background: #c6f6d5; color: #22543d; }
-    .status-override { background: #feebc8; color: #744210; }
-
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-
-    /* MAPPING BUILDER STYLES */
-    .mapping-section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; margin: 18px 0 8px 0; font-weight: bold; font-size: 13px; }
-    .header-info { background: #edf2f7; color: #2d3748; border-left: 4px solid #4a5568; }
-    .header-earnings { background: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
-    .header-gross { background: #bbdefb; color: #0d47a1; border-left: 4px solid #0d47a1; }
-    .header-deductions { background: #fff3e0; color: #e65100; border-left: 4px solid #e65100; }
-    .header-adjustments { background: #f3e5f5; color: #6a1b9a; border-left: 4px solid #6a1b9a; }
-    .header-net { background: #e8f5e9; color: #1b5e20; border-left: 4px solid #1b5e20; }
-
-    .mapping-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; min-height: 10px; }
-    .mapping-row { display: flex; gap: 6px; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; cursor: move; }
-    .mapping-row.dragging { opacity: 0.4; border: 2px dashed #3182ce; }
-    .drag-handle { cursor: grab; font-weight: bold; color: #a0aec0; padding: 0 4px; font-size: 16px; user-select: none; }
-    .map-input-name { flex: 2; text-transform: uppercase; font-size: 12px; }
-    .map-input-unit { flex: 1; text-transform: uppercase; font-size: 12px; }
-    .map-input-col { flex: 1.2; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px; }
-    .btn-icon-danger { background: #fed7d7; color: #9b2c2c; border: none; border-radius: 4px; padding: 8px 10px; cursor: pointer; font-weight: bold; }
-    .btn-icon-danger:hover { background: #feb2b2; }
-
-    .duplicate-info-box { background: #fff5f5; border: 1px solid #feb2b2; padding: 12px; border-radius: 6px; margin: 15px 0; font-size: 13px; color: #9b2c2c; }
-
-    /* PREVIEW PAYSLIP STYLES */
-    .payslip-preview-card { border: 2px dashed #3182ce; padding: 20px; background: #fff; border-radius: 8px; margin-top: 15px; }
-    .payslip-header-box { border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 15px; text-align: center; }
-    .payslip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-    .payslip-table { width: 100%; border-collapse: collapse; }
-    .payslip-table th { background: #edf2f7; font-size: 11px; padding: 6px; text-align: left; }
-    .payslip-table td { padding: 6px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-    .payslip-total-row { font-weight: bold; background: #f7fafc; }
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background-color: #f1f5f9;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .admin-card {
+      background: #ffffff;
+      padding: 35px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 550px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #0f172a;
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+    p {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus {
+      border-color: #2563eb;
+    }
+    .dropzone {
+      border: 2px dashed #cbd5e1;
+      padding: 30px 20px;
+      border-radius: 8px;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 20px;
+    }
+    .dropzone:hover {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover {
+      background: #1d4ed8;
+    }
+    .btn-submit:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    #statusBox {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      display: none;
+      line-height: 1.4;
+    }
+    .status-info { background: #e0f2fe; color: #0369a1; }
+    .status-success { background: #dcfce7; color: #15803d; }
+    .status-error { background: #fee2e2; color: #b91c1c; }
   </style>
 
+  <!-- SheetJS Library for Parsing Excel Files directly in Browser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
-  <!-- LANDING CARD -->
-  <div id="landingCard" class="container" style="text-align: center;">
-    <h2>PAYSLIP SYSTEM ADMIN</h2>
-    <p style="color: #718096; margin-bottom: 25px;">Select an action to continue</p>
-    <div style="display: flex; flex-direction: column; gap: 15px;">
-      <button class="btn-success" style="padding: 15px; font-size: 16px;" onclick="showUploadAuthScreen()">UPLOAD PAYROLL</button>
-      <button class="btn-dark" style="padding: 15px; font-size: 16px;" onclick="showLoginScreen()">ADMIN LOGIN</button>
-    </div>
-  </div>
+  <div class="admin-card">
+    <h2>Payroll Admin Uploader</h2>
+    <p>Upload Excel files (~5,000 employees). Files are parsed into lightweight JSON in your browser to avoid payload limit errors.</p>
 
-  <!-- ADMIN LOGIN CARD -->
-  <div id="loginCard" class="container">
-    <h2 style="text-align: center; margin-top: 0;">ADMIN LOGIN</h2>
-    <div class="input-group">
-      <label>ADMIN EMAIL</label>
-      <input type="email" id="adminEmail" placeholder="admin@company.com">
-    </div>
-    <div class="input-group">
-      <label>PASSWORD</label>
-      <input type="password" id="adminPass" placeholder="ENTER PASSWORD">
-    </div>
-    <div style="display: flex; gap: 10px;">
-      <button class="btn-dark" style="width: 30%;" onclick="showLandingScreen()">BACK</button>
-      <button style="width: 70%;" onclick="loginAdmin()">LOGIN</button>
-    </div>
-    <div id="loginErr" style="color: red; font-weight: bold; margin-top: 10px; text-align: center;"></div>
-  </div>
-
-  <!-- UPLOAD PAYROLL AUTHORIZATION CARD -->
-  <div id="uploadAuthCard" class="container">
-    <h2 style="text-align: center; margin-top: 0;">PAYROLL UPLOAD AUTHORIZATION</h2>
-    
-    <div class="input-group">
-      <label>SELECT COMPANY / CLIENT</label>
-      <select id="authClientSelect">
-        <option value="">-- SELECT CLIENT --</option>
-      </select>
+    <div class="form-group">
+      <label for="cutoffPeriod">Cutoff Period / Identifier:</label>
+      <input type="text" id="cutoffPeriod" placeholder="e.g., Aug 01-15 2026">
     </div>
 
-    <div class="input-group">
-      <label>PAYROLL DATE (MONTH - DAY - YEAR)</label>
-      <input type="date" id="authPayrollDate">
+    <div class="dropzone" onclick="document.getElementById('excelFile').click()">
+      <strong id="fileLabel">📁 Click to Select Excel File (.xlsx)</strong>
+      <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="updateFileLabel()">
     </div>
 
-    <div style="display: flex; gap: 10px;">
-      <div class="input-group" style="flex: 1;">
-        <label>PAYROLL PERIOD (FROM)</label>
-        <input type="date" id="authPeriodFrom">
-      </div>
-      <div class="input-group" style="flex: 1;">
-        <label>PAYROLL PERIOD (UP TO)</label>
-        <input type="date" id="authPeriodTo">
-      </div>
-    </div>
+    <button id="uploadBtn" class="btn-submit" onclick="processAndUploadExcel()">PROCESS & UPLOAD PAYSLIPS</button>
 
-    <div class="input-group">
-      <label>EMPLOYEE ID</label>
-      <input type="text" id="authIdInput" placeholder="ENTER ID">
-    </div>
-    
-    <div class="input-group">
-      <label>PIN</label>
-      <input type="password" id="authPinInput" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
-    </div>
-
-    <input type="file" id="publicPayrollFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handlePublicPayrollUpload()">
-    
-    <div style="display: flex; gap: 10px;">
-      <button class="btn-dark" style="width: 30%;" onclick="showLandingScreen()">BACK</button>
-      <button class="btn-success" style="width: 70%;" onclick="verifyAuthorizationAndUpload()">AUTHORIZE & SELECT FILE</button>
-    </div>
-  </div>
-
-  <!-- MAIN ADMIN DASHBOARD -->
-  <div id="adminDashboard" class="container">
-    <div class="dashboard-header">
-      <h2>PAYSLIP ADMIN DASHBOARD</h2>
-      <div>
-        <button class="btn-dark" style="margin-right: 10px;" onclick="openHistoryModal()">HISTORY</button>
-        <button class="btn-danger" onclick="logoutAdmin()">LOGOUT</button>
-      </div>
-    </div>
-
-    <!-- CLIENT MANAGEMENT & COLUMN MAPPING -->
-    <div class="section-title">Manage Clients & Column Mappings</div>
-    <div style="background: #f7fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <input type="text" id="newClientName" placeholder="Enter New Client Name (e.g. TECDIA CEBU INC.)">
-        <button class="btn-success" onclick="addNewClient()">ADD CLIENT</button>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>CLIENT NAME</th>
-            <th style="text-align: right;">ACTIONS</th>
-          </tr>
-        </thead>
-        <tbody id="clientListBody">
-          <tr><td colspan="2" style="text-align: center;">Loading clients...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- EXCEL TOOLBAR -->
-    <div class="excel-toolbar">
-      <strong>BULK EMPLOYEE MANAGEMENT (ID & PIN)</strong>
-      <div class="excel-actions">
-        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleFileSelected()">
-        <button class="btn-success" onclick="triggerExcelUpload()">UPLOAD EMPLOYEES (ID & PIN)</button>
-        <button class="btn-dark" onclick="downloadEmployeeExcel()">DOWNLOAD ALL PINs</button>
-        <button class="btn-warning" onclick="toggleWhitelistPanel()">WHITELIST</button>
-      </div>
-
-      <!-- WHITELIST EXPANDABLE PANEL -->
-      <div id="whitelistPanel" class="whitelist-panel">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <strong style="color: #276749;">WHITELIST MANAGEMENT</strong>
-          <span style="font-size: 11px; color: #4a5568;">Only whitelisted IDs are allowed to self-register</span>
-        </div>
-
-        <div class="excel-actions">
-          <input type="file" id="whitelistFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleWhitelistUpload()">
-          <button class="btn-success" onclick="triggerWhitelistUpload()">UPLOAD WHITELIST</button>
-          <button class="btn-dark" onclick="manuallyAddWhitelist()">ADD WHITELIST</button>
-          <button class="btn-warning" onclick="downloadWhitelistExcel()">DOWNLOAD WHITELIST</button>
-        </div>
-
-        <div style="margin-top: 5px;">
-          <input type="text" id="whitelistSearchInput" placeholder="Search Whitelisted ID Number..." onkeyup="filterWhitelistTable()">
-        </div>
-
-        <div class="whitelist-table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>WHITELISTED ID NUMBER</th>
-                <th style="text-align: right;">ACTION</th>
-              </tr>
-            </thead>
-            <tbody id="whitelistTableBody">
-              <tr><td colspan="2" style="text-align: center;">Loading whitelist...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- UPLOAD PROGRESS BAR -->
-    <div id="uploadProgressContainer">
-      <strong id="uploadStatusText" style="color: #dd6b20;">Processing Excel file...</strong>
-      <progress id="uploadProgressBar" value="0" max="100"></progress>
-    </div>
-
-    <!-- SEARCH -->
-    <div class="input-group" style="margin-top: 20px;">
-      <label>SEARCH ALL RECORDS</label>
-      <input type="text" id="searchInput" placeholder="Search Employee ID or Name across lists..." onkeyup="filterAllTables()">
-    </div>
-
-    <!-- REGISTERED EMPLOYEES & PERMISSIONS -->
-    <div class="section-title">Registered Employees & Permissions</div>
-    <table>
-      <thead>
-        <tr>
-          <th>EMPLOYEE ID</th>
-          <th>NAME</th>
-          <th>CURRENT PIN</th>
-          <th>OVERRIDE PERMISSION</th>
-          <th style="text-align: right;">ACTION</th>
-        </tr>
-      </thead>
-      <tbody id="employeeBody">
-        <tr><td colspan="5" style="text-align: center;">Loading employees...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- DYNAMIC COLUMN MAPPING MODAL -->
-  <div id="mappingModal" class="modal-overlay">
-    <div class="modal-content">
-      <h3 id="mappingModalTitle" style="margin-top: 0; color: #2b6cb0;">Custom Column Mapping</h3>
-      <p style="font-size: 12px; color: #718096; margin-bottom: 15px;">
-        Customize item names, unit headers, Qty columns, and Amount columns. Single columns (e.g. <code>AQ</code>) or Excel math formulas (e.g. <code>=A1+A2</code> or <code>=A+B-C</code> up to 5 cols) are supported. Drag rows (☰) to reorder.
-      </p>
-
-      <!-- EMPLOYEE IDENTIFICATION MAPPING -->
-      <div class="mapping-section-header header-info">
-        <span>EMPLOYEE IDENTIFICATION MAPPING</span>
-      </div>
-      <div style="display: flex; gap: 10px; background: #f8fafc; border: 1px solid #cbd5e0; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
-        <div style="flex: 1;">
-          <label style="font-size: 11px; margin-bottom: 3px;">EMPLOYEE ID COLUMN</label>
-          <input type="text" id="empIdColInput" placeholder="EXCEL COL (E.G. F)" style="text-transform: uppercase; font-weight: bold; text-align: center;">
-        </div>
-        <div style="flex: 1;">
-          <label style="font-size: 11px; margin-bottom: 3px;">EMPLOYEE NAME COLUMN</label>
-          <input type="text" id="empNameColInput" placeholder="EXCEL COL (E.G. G)" style="text-transform: uppercase; font-weight: bold; text-align: center;">
-        </div>
-      </div>
-
-      <!-- 1. EARNINGS SECTION (PAIRED QTY & AMOUNT) -->
-      <div class="mapping-section-header header-earnings">
-        <span>EARNINGS & HOURS SECTION (PAIRED HOURS/DAYS & AMOUNT)</span>
-        <button class="btn-success" style="padding: 4px 10px; font-size: 11px;" onclick="addEarningsRow()">+ ADD EARNINGS SLOT</button>
-      </div>
-      <div class="mapping-list" id="earningsList"></div>
-
-      <!-- 2. GROSS PAY -->
-      <div class="mapping-section-header header-gross">
-        <span>GROSS PAY</span>
-      </div>
-      <div class="mapping-row" style="cursor: default; background: #ebf8ff; margin-bottom: 15px;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL GROSS PAY" readonly style="flex: 3; font-weight: bold; background: #e2e8f0; font-size: 12px;">
-        <input type="text" id="grossPayColInput" placeholder="COL OR FORMULA (E.G. BB OR =A+B)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <!-- 3. DEDUCTIONS SECTION -->
-      <div class="mapping-section-header header-deductions">
-        <span>DEDUCTION SECTION</span>
-        <button class="btn-warning" style="padding: 4px 10px; font-size: 11px;" onclick="addStandardRow('deductionsList')">+ ADD DEDUCTION SLOT</button>
-      </div>
-      <div class="mapping-list" id="deductionsList"></div>
-
-      <!-- TOTAL DEDUCTIONS COLUMN MAPPING -->
-      <div class="mapping-row" style="cursor: default; background: #fff3e0; margin-bottom: 15px;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL DEDUCTIONS" readonly style="flex: 3; font-weight: bold; background: #ffe0b2; font-size: 12px; color: #e65100;">
-        <input type="text" id="totalDeductionsColInput" placeholder="COL OR FORMULA (E.G. DO OR =A1+A2)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <!-- 4. ADJUSTMENTS SECTION -->
-      <div class="mapping-section-header header-adjustments">
-        <span>ADJUSTMENTS SECTION</span>
-        <button class="btn-dark" style="padding: 4px 10px; font-size: 11px;" onclick="addStandardRow('adjustmentsList')">+ ADD ADJUSTMENT SLOT</button>
-      </div>
-      <div class="mapping-list" id="adjustmentsList"></div>
-
-      <!-- TOTAL ADJUSTMENTS COLUMN MAPPING -->
-      <div class="mapping-row" style="cursor: default; background: #f3e5f5; margin-bottom: 15px;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL ADJUSTMENTS" readonly style="flex: 3; font-weight: bold; background: #e1bee7; font-size: 12px; color: #6a1b9a;">
-        <input type="text" id="totalAdjustmentsColInput" placeholder="COL OR FORMULA" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <!-- 5. NET TAKE HOME -->
-      <div class="mapping-section-header header-net">
-        <span>NET TAKE HOME</span>
-      </div>
-      <div class="mapping-row" style="cursor: default; background: #e8f5e9;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="NET PAY" readonly style="flex: 3; font-weight: bold; background: #c8e6c9; font-size: 12px; color: #1b5e20;">
-        <input type="text" id="netPayColInput" placeholder="COL OR FORMULA (E.G. BD)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 25px;">
-        <button class="btn-warning" onclick="openPayslipPreview()">👁️ PREVIEW PAYSLIP VIEW</button>
-        <div style="display: flex; gap: 10px;">
-          <button onclick="closeMappingModal()" style="background: #a0aec0;">CANCEL</button>
-          <button class="btn-success" onclick="saveClientMapping()">SAVE MAPPING</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PAYSLIP ACTUAL VIEW PREVIEW MODAL -->
-  <div id="previewModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 850px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">
-        <h3 style="margin: 0; color: #2b6cb0;">EMPLOYEE PAYSLIP LIVE PREVIEW</h3>
-        <button class="btn-dark" style="padding: 4px 10px; font-size: 12px;" onclick="closePayslipPreview()">CLOSE PREVIEW</button>
-      </div>
-
-      <div class="payslip-preview-card">
-        <!-- HEADER HIERARCHY -->
-        <div class="payslip-header-box">
-          <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #1a202c; text-transform: uppercase;">
-            INT'L. MANPOWER ESSENTIALS, INC.
-          </h2>
-          <div style="font-size: 14px; font-weight: bold; color: #2b6cb0; margin-top: 4px; text-transform: uppercase;">
-            CLIENT : <span id="prevClientTitle">TECDIA CEBU INC.</span>
-          </div>
-          <div style="font-size: 13px; font-weight: bold; color: #4a5568; margin-top: 4px; text-transform: uppercase;">
-            PAYROLL : <span id="prevPayrollDateTitle">JULY 15, 2026</span>
-          </div>
-          <div style="font-size: 13px; font-weight: 500; color: #4a5568; margin-top: 2px; text-transform: uppercase;">
-            PAYROLL PERIOD: <span id="prevPayrollPeriodTitle">JUNE 26 - JULY 10, 2026</span>
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; background: #edf2f7; padding: 10px 15px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-bottom: 15px;">
-          <div>EMPLOYEE ID NUMBER: <span id="prevEmpId" style="color: #2b6cb0;">831016 (COL: F)</span></div>
-          <div>EMPLOYEE NAME: <span id="prevEmpName" style="color: #2b6cb0;">COLES, BENJELEN (COL: G)</span></div>
-        </div>
-
-        <!-- EARNINGS & HOURS -->
-        <div style="margin-bottom: 20px;">
-          <h4 style="margin: 0 0 8px 0; color: #1565c0; border-bottom: 2px solid #90caf9;">EARNINGS & HOURS</h4>
-          <table class="payslip-table">
-            <thead>
-              <tr>
-                <th style="width: 45%;">TYPE</th>
-                <th style="width: 25%; text-align: center;">HOURS / DAYS</th>
-                <th style="width: 30%; text-align: right;">AMOUNT</th>
-              </tr>
-            </thead>
-            <tbody id="prevEarningsBody"></tbody>
-          </table>
-        </div>
-
-        <div class="payslip-grid">
-          <!-- DEDUCTIONS TABLE -->
-          <div>
-            <h4 style="margin: 0 0 8px 0; color: #e65100; border-bottom: 2px solid #ffcc80;">DEDUCTIONS</h4>
-            <table class="payslip-table">
-              <thead>
-                <tr>
-                  <th>ITEM</th>
-                  <th style="text-align: right;">AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody id="prevDeductionsBody"></tbody>
-            </table>
-          </div>
-
-          <!-- ADJUSTMENTS TABLE -->
-          <div>
-            <h4 style="margin: 0 0 8px 0; color: #6a1b9a; border-bottom: 2px solid #ce93d8;">ADJUSTMENTS</h4>
-            <table class="payslip-table">
-              <thead>
-                <tr>
-                  <th>ITEM</th>
-                  <th style="text-align: right;">AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody id="prevAdjustmentsBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- PAY SUMMARY BOX -->
-        <div style="margin-top: 15px;">
-          <h4 style="margin: 0 0 8px 0; color: #1b5e20; border-bottom: 2px solid #a5d6a7;">PAY SUMMARY</h4>
-          <table class="payslip-table">
-            <tbody>
-              <tr>
-                <td><strong>TOTAL GROSS PAY</strong></td>
-                <td style="text-align: right; font-weight: bold;" id="prevGrossVal">15,450.00 (COL: BB)</td>
-              </tr>
-              <tr>
-                <td><strong>TOTAL DEDUCTIONS</strong></td>
-                <td style="text-align: right; font-weight: bold; color: #c53030;" id="prevDedVal">1,200.00</td>
-              </tr>
-              <tr>
-                <td><strong>TOTAL ADJUSTMENTS</strong></td>
-                <td style="text-align: right; font-weight: bold; color: #6a1b9a;" id="prevAdjVal">3,000.00</td>
-              </tr>
-              <tr class="payslip-total-row" style="background: #e8f5e9;">
-                <td style="font-size: 14px; color: #1b5e20;"><strong>NET TAKE HOME</strong></td>
-                <td style="text-align: right; font-size: 14px; color: #1b5e20;" id="prevNetVal">17,250.00 (COL: BD)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-        <button class="btn-dark" onclick="closePayslipPreview()">BACK TO MAPPING</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- DUPLICATE DETECTION & OVERRIDE MODAL -->
-  <div id="overrideAuthModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 450px;">
-      <h3 style="margin-top: 0; color: #c53030;">DUPLICATE RECORD DETECTED</h3>
-      <p style="font-size: 13px; color: #4a5568; margin-bottom: 5px;">A payroll record matching BOTH Client and Date already exists:</p>
-      
-      <div class="duplicate-info-box">
-        <strong>CLIENT:</strong> <span id="dupClientText">---</span><br>
-        <strong>PAYROLL DATE:</strong> <span id="dupDateText">---</span>
-      </div>
-
-      <p style="font-size: 12px; color: #718096; margin-bottom: 10px;">To overwrite this existing record, enter an authorized Employee ID & PIN below:</p>
-
-      <div class="input-group">
-        <label>AUTHORIZATION EMPLOYEE ID</label>
-        <input type="text" id="overrideEmpIdInput" placeholder="ENTER ID">
-      </div>
-      <div class="input-group">
-        <label>PIN</label>
-        <input type="password" id="overridePinInput" placeholder="ENTER PIN" maxlength="6">
-      </div>
-
-      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-        <button onclick="cancelOverrideUpload()" style="background: #a0aec0;">CANCEL</button>
-        <button class="btn-warning" onclick="verifyAndExecuteOverride()">OVERRIDE & UPLOAD</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- HISTORY MODAL -->
-  <div id="historyModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 980px;">
-      <h3 style="margin-top: 0; color: #2d3748;">UPLOAD & OVERRIDE HISTORY LOGS</h3>
-      <p style="font-size: 12px; color: #718096;">Record of all authorized payroll uploads, overrides, and downloadable source files.</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>UPLOADER ID</th>
-            <th>CLIENT NAME</th>
-            <th>PAYROLL DATE</th>
-            <th>PAYROLL PERIOD</th>
-            <th>ACTION STATUS</th>
-            <th>DATE & TIME</th>
-            <th style="text-align: center;">DOWNLOAD FILE</th>
-          </tr>
-        </thead>
-        <tbody id="historyTableBody">
-          <tr><td colspan="7" style="text-align: center;">Loading history...</td></tr>
-        </tbody>
-      </table>
-
-      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-        <button class="btn-dark" onclick="closeHistoryModal()">CLOSE</button>
-      </div>
-    </div>
+    <div id="statusBox"></div>
   </div>
 
   <script>
+    // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAUipD5NKYj61dEfM1PoyQ2UxVwQ17W24k",
       authDomain: "payslip-portal-328ef.firebaseapp.com",
@@ -531,1212 +152,131 @@
       measurementId: "G-D8SZDV2CTP"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const auth = firebase.auth();
 
-    const DEFAULT_EARNINGS = [
-      { label: "REGULAR DAYS", unit: "DAYS", qtyCol: "AQ", amtCol: "AS" },
-      { label: "REGULAR OT", unit: "HOURS", qtyCol: "AT", amtCol: "AU" },
-      { label: "NIGHT DIFFERENTIAL", unit: "HOURS", qtyCol: "AV", amtCol: "AW" },
-      { label: "REGULAR OT NP", unit: "HOURS", qtyCol: "AX", amtCol: "AY" },
-      { label: "REST DAY", unit: "HOURS", qtyCol: "BV", amtCol: "BW" },
-      { label: "REST DAY OT", unit: "HOURS", qtyCol: "BX", amtCol: "BY" },
-      { label: "REST DAY NP", unit: "HOURS", qtyCol: "BZ", amtCol: "CA" },
-      { label: "REST DAY NP OT", unit: "HOURS", qtyCol: "CB", amtCol: "CC" },
-      { label: "LEAVE WITH PAY", unit: "DAYS", qtyCol: "", amtCol: "" }
-    ];
-
-    const DEFAULT_DEDUCTIONS = [
-      { label: "WELFARE", unit: "AMOUNT", col: "" },
-      { label: "HEALTH INSURANCE PREMIUM", unit: "AMOUNT", col: "" },
-      { label: "INSURANCE CARD", unit: "AMOUNT", col: "" },
-      { label: "MISC.", unit: "AMOUNT", col: "" },
-      { label: "MEDICAL", unit: "AMOUNT", col: "" },
-      { label: "SALARY LOAN 1", unit: "AMOUNT", col: "" },
-      { label: "SALARY LOAN 2", unit: "AMOUNT", col: "" },
-      { label: "SALARY LOAN 3", unit: "AMOUNT", col: "" },
-      { label: "SSS LOAN", unit: "AMOUNT", col: "" },
-      { label: "SSS CALAMITY LOAN", unit: "AMOUNT", col: "" },
-      { label: "HDMF LOAN", unit: "AMOUNT", col: "" },
-      { label: "HDMF CALAMITY LOAN", unit: "AMOUNT", col: "" }
-    ];
-
-    const DEFAULT_ADJUSTMENTS = [
-      { label: "PAYROLL ADJUSTMENT", unit: "AMOUNT", col: "" },
-      { label: "REFUND SALARY", unit: "AMOUNT", col: "" }
-    ];
-
-    let clientsList = [];
-    let currentMappingClientId = null;
-    let pendingPayrollWorksheet = null;
-    let activeAuthorizedEmp = null;
-    let currentUploadFileData = null;
-    let allEmployees = [];
-    let allWhitelistedRecords = [];
-    let draggedElement = null;
-
-    // Helper: Remove hyphens and whitespace to unify ID representation
-    function cleanEmpId(id) {
-      if (!id) return '';
-      return String(id).replace(/[-\s]/g, '').trim().toUpperCase();
-    }
-
-    function arrayBufferToBase64(buffer) {
-      let binary = '';
-      const bytes = new Uint8Array(buffer);
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return window.btoa(binary);
-    }
-
-    function formatDateDisplay(dateStr) {
-      if (!dateStr) return "---";
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      const options = { month: 'long', day: 'numeric', year: 'numeric' };
-      return d.toLocaleDateString('en-US', options).toUpperCase();
-    }
-
-    function showLandingScreen() {
-      document.getElementById("landingCard").style.display = "block";
-      document.getElementById("loginCard").style.display = "none";
-      document.getElementById("uploadAuthCard").style.display = "none";
-      document.getElementById("adminDashboard").style.display = "none";
-    }
-
-    function showLoginScreen() {
-      document.getElementById("landingCard").style.display = "none";
-      document.getElementById("loginCard").style.display = "block";
-      document.getElementById("uploadAuthCard").style.display = "none";
-    }
-
-    function showUploadAuthScreen() {
-      document.getElementById("landingCard").style.display = "none";
-      document.getElementById("uploadAuthCard").style.display = "block";
-      populateClientDropdown();
-    }
-
-    function parseExcelNum(val) {
-      if (val === null || val === undefined || val === '') return 0;
-      const cleaned = String(val).replace(/[^0-9.-]/g, '');
-      const parsed = parseFloat(cleaned);
-      return isNaN(parsed) ? 0 : parsed;
-    }
-
-    function getCellValue(worksheet, colLetter, rowNumber) {
-      if (!colLetter) return null;
-      const cellAddress = colLetter.trim().toUpperCase() + rowNumber;
-      const cell = worksheet[cellAddress];
-      return cell ? cell.v : null;
-    }
-
-    /* --- EXCEL FORMULA EVALUATION ENGINE --- */
-    function evaluateFormulaOrCol(inputExpr, worksheet, rowNumber) {
-      if (!inputExpr) return 0;
-      let expr = String(inputExpr).trim();
-      if (!expr) return 0;
-
-      if (expr.startsWith('=')) {
-        expr = expr.substring(1).trim();
-      }
-
-      if (/^[A-Za-z]+$/.test(expr)) {
-        return parseExcelNum(getCellValue(worksheet, expr, rowNumber));
-      }
-
-      const colTokens = expr.match(/\b[A-Za-z]+[0-9]*\b/g) || [];
-      const uniqueCols = [...new Set(colTokens.map(t => t.replace(/[0-9]/g, '').toUpperCase()))];
-
-      if (uniqueCols.length > 5) {
-        console.warn("Formula exceeds 5 unique column limit:", expr);
-        return 0;
-      }
-
-      let evalExpr = expr.toUpperCase();
-
-      colTokens.forEach(token => {
-        const colLetter = token.replace(/[0-9]/g, '');
-        const cellVal = parseExcelNum(getCellValue(worksheet, colLetter, rowNumber));
-        const tokenRegex = new RegExp('\\b' + token.toUpperCase() + '\\b', 'g');
-        evalExpr = evalExpr.replace(tokenRegex, cellVal < 0 ? `(${cellVal})` : cellVal);
-      });
-
-      if (!/^[0-9.+\-*/()\s]+$/.test(evalExpr)) {
-        console.warn("Formula contains unsupported characters:", evalExpr);
-        return 0;
-      }
-
-      try {
-        const result = new Function(`"use strict"; return (${evalExpr})`)();
-        return (isNaN(result) || !isFinite(result)) ? 0 : result;
-      } catch (err) {
-        console.error("Error evaluating formula:", expr, err);
-        return 0;
+    function updateFileLabel() {
+      const input = document.getElementById('excelFile');
+      if (input.files.length > 0) {
+        document.getElementById('fileLabel').innerText = "📄 Selected: " + input.files[0].name;
       }
     }
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("landingCard").style.display = "none";
-        document.getElementById("loginCard").style.display = "none";
-        document.getElementById("uploadAuthCard").style.display = "none";
-        document.getElementById("adminDashboard").style.display = "block";
-        loadClients();
-        loadEmployees();
-        loadWhitelist();
-      } else {
-        showLandingScreen();
-      }
-    });
-
-    async function loginAdmin() {
-      const email = document.getElementById("adminEmail").value.trim();
-      const pass = document.getElementById("adminPass").value.trim();
-      try {
-        await auth.signInWithEmailAndPassword(email, pass);
-      } catch (error) {
-        document.getElementById("loginErr").innerText = "ACCESS DENIED: " + error.message;
-      }
+    function showStatus(text, type) {
+      const statusBox = document.getElementById('statusBox');
+      statusBox.style.display = 'block';
+      statusBox.className = 'status-' + type;
+      statusBox.innerText = text;
     }
 
-    function logoutAdmin() { auth.signOut(); }
+    async function processAndUploadExcel() {
+      const fileInput = document.getElementById('excelFile');
+      const cutoffInput = document.getElementById('cutoffPeriod');
+      const uploadBtn = document.getElementById('uploadBtn');
 
-    function loadClients() {
-      db.collection("clients").onSnapshot(snapshot => {
-        clientsList = [];
-        snapshot.forEach(doc => clientsList.push({ id: doc.id, ...doc.data() }));
-        renderClientsTable();
-        populateClientDropdown();
-      });
-    }
-
-    function renderClientsTable() {
-      const tbody = document.getElementById("clientListBody");
-      tbody.innerHTML = "";
-      if (clientsList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No clients added yet.</td></tr>`;
+      if (!fileInput.files.length) {
+        showStatus("Please select an Excel file first.", "error");
         return;
       }
-      clientsList.forEach(client => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${client.name}</strong></td>
-          <td style="text-align: right;">
-            <button class="btn-warning" onclick="openMappingModal('${client.id}')">MAP COLUMNS</button>
-            <button class="btn-danger" onclick="deleteClient('${client.id}')">DELETE</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
 
-    function populateClientDropdown() {
-      const select = document.getElementById("authClientSelect");
-      select.innerHTML = `<option value="">-- SELECT CLIENT --</option>`;
-      clientsList.forEach(c => {
-        select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-      });
-    }
-
-    async function addNewClient() {
-      const name = document.getElementById("newClientName").value.trim().toUpperCase();
-      if (!name) return alert("Enter client name.");
-      try {
-        const docRef = db.collection("clients").doc();
-        await docRef.set({ name: name, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        document.getElementById("newClientName").value = "";
-      } catch (err) {
-        alert("Error adding client: " + err.message);
-      }
-    }
-
-    async function deleteClient(id) {
-      if (confirm("Delete this client and its column mappings?")) {
-        await db.collection("clients").doc(id).delete();
-      }
-    }
-
-    /* --- WHITELIST MANAGEMENT MODULE --- */
-    function toggleWhitelistPanel() {
-      const panel = document.getElementById("whitelistPanel");
-      if (panel.style.display === "flex") {
-        panel.style.display = "none";
-      } else {
-        panel.style.display = "flex";
-      }
-    }
-
-    function loadWhitelist() {
-      db.collection("whitelist").onSnapshot(snapshot => {
-        allWhitelistedRecords = [];
-        snapshot.forEach(doc => {
-          allWhitelistedRecords.push({ id: doc.id, ...doc.data() });
-        });
-        renderWhitelistTable(allWhitelistedRecords);
-      });
-    }
-
-    function renderWhitelistTable(list) {
-      const tbody = document.getElementById("whitelistTableBody");
-      tbody.innerHTML = "";
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No Whitelisted IDs found.</td></tr>`;
-        return;
-      }
-      list.forEach(item => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${item.displayId || item.id}</strong></td>
-          <td style="text-align: right;">
-            <button class="btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteWhitelistId('${item.id}')">REMOVE</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function filterWhitelistTable() {
-      const q = cleanEmpId(document.getElementById("whitelistSearchInput").value);
-      const filtered = allWhitelistedRecords.filter(item => {
-        return cleanEmpId(item.id).includes(q) || cleanEmpId(item.displayId || '').includes(q);
-      });
-      renderWhitelistTable(filtered);
-    }
-
-    function triggerWhitelistUpload() {
-      document.getElementById("whitelistFileInput").click();
-    }
-
-    async function handleWhitelistUpload() {
-      const fileInput = document.getElementById("whitelistFileInput");
       const file = fileInput.files[0];
-      if (!file) return;
+      const cutoff = cutoffInput.value.trim() || "default_cutoff";
+
+      uploadBtn.disabled = true;
+      showStatus("Reading Excel file in browser...", "info");
 
       const reader = new FileReader();
+
       reader.onload = async function (e) {
         try {
+          showStatus("Parsing sheet into JSON...", "info");
+          
+          // Read binary buffer
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', raw: false });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const workbook = XLSX.read(data, { type: 'array' });
 
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-          const parsedIds = [];
-          const seenCleanedIds = new Set();
-          let duplicatesFound = false;
+          // Get first sheet
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
 
-          for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length === 0) continue;
+          // Convert sheet to JSON array
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-            const rawVal = String(row[0] || "").trim();
-            if (!rawVal || rawVal.toUpperCase() === "ID" || rawVal.toUpperCase() === "EMPLOYEE ID") continue;
-
-            const cleaned = cleanEmpId(rawVal);
-            if (!cleaned) continue;
-
-            // Check for internal duplicate inside uploaded file
-            if (seenCleanedIds.has(cleaned)) {
-              duplicatesFound = true;
-              break;
-            }
-            seenCleanedIds.add(cleaned);
-            parsedIds.push({ raw: rawVal, clean: cleaned });
-          }
-
-          if (duplicatesFound) {
-            alert("UPLOAD REJECTED: The Excel file contains duplicate Employee IDs (ignoring hyphens/spaces). Please clean the list and try again.");
-            fileInput.value = "";
+          if (!rawRows || rawRows.length === 0) {
+            showStatus("No data rows found in the Excel sheet.", "error");
+            uploadBtn.disabled = false;
             return;
           }
 
-          if (parsedIds.length === 0) {
-            alert("UPLOAD REJECTED: No valid ID numbers found in Column A.");
-            fileInput.value = "";
-            return;
-          }
+          showStatus(`Extracted ${rawRows.length.toLocaleString()} rows. Formatting records...`, "info");
 
-          if (!confirm(`Uploading will OVERWRITE the current whitelist with ${parsedIds.length} new IDs. Do you want to proceed?`)) {
-            fileInput.value = "";
-            return;
-          }
-
-          // Step 1: Wipe all old whitelist documents
-          const existingSnapshot = await db.collection("whitelist").get();
-          let deleteBatch = db.batch();
-          let delCount = 0;
-          existingSnapshot.forEach(doc => {
-            deleteBatch.delete(doc.ref);
-            delCount++;
-            if (delCount === 400) {
-              deleteBatch.commit();
-              deleteBatch = db.batch();
-              delCount = 0;
+          const cleanedPayslips = [];
+          
+          rawRows.forEach((row) => {
+            // Flexible detection for Employee ID header column
+            const empIdRaw = row.empId || row["EMPLOYEE ID"] || row["ID NUMBER"] || row["EMP ID"] || row["Employee ID"] || row["ID"] || row["F"] || row["__EMPTY"];
+            
+            if (empIdRaw) {
+              const cleanId = String(empIdRaw).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+              if (cleanId.length > 0) {
+                cleanedPayslips.push({
+                  ...row,
+                  empId: cleanId,
+                  cutoffPeriod: cutoff,
+                  uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+              }
             }
           });
-          if (delCount > 0) await deleteBatch.commit();
 
-          // Step 2: Save new whitelist IDs
-          let writeBatch = db.batch();
-          let writeCount = 0;
+          if (cleanedPayslips.length === 0) {
+            showStatus("Could not locate valid Employee IDs. Check sheet headers.", "error");
+            uploadBtn.disabled = false;
+            return;
+          }
 
-          for (const item of parsedIds) {
-            const docRef = db.collection("whitelist").doc(item.clean);
-            writeBatch.set(docRef, {
-              displayId: item.raw,
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          showStatus(`Uploading ${cleanedPayslips.length.toLocaleString()} records...`, "info");
+
+          // Batch Upload to Firestore in Chunks of 400
+          const CHUNK_SIZE = 400;
+          let uploadedCount = 0;
+          const totalBatches = Math.ceil(cleanedPayslips.length / CHUNK_SIZE);
+          const cutoffSlug = cutoff.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+          for (let i = 0; i < cleanedPayslips.length; i += CHUNK_SIZE) {
+            const chunk = cleanedPayslips.slice(i, i + CHUNK_SIZE);
+            const batch = db.batch();
+
+            chunk.forEach(payslip => {
+              // Custom Doc ID prevents creation of duplicate rows if re-uploaded
+              const customDocId = `${payslip.empId}_${cutoffSlug}`;
+              const docRef = db.collection("payslips").doc(customDocId);
+              
+              batch.set(docRef, payslip, { merge: true });
             });
 
-            writeCount++;
-            if (writeCount === 400) {
-              await writeBatch.commit();
-              writeBatch = db.batch();
-              writeCount = 0;
-            }
+            await batch.commit();
+            uploadedCount += chunk.length;
+
+            const currentBatch = Math.ceil(uploadedCount / CHUNK_SIZE);
+            showStatus(`Uploading Batch ${currentBatch} of ${totalBatches}... (${uploadedCount.toLocaleString()} / ${cleanedPayslips.length.toLocaleString()} uploaded)`, "info");
           }
-          if (writeCount > 0) await writeBatch.commit();
 
-          alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedIds.length} IDs uploaded.`);
+          showStatus(`🎉 SUCCESS! All ${cleanedPayslips.length.toLocaleString()} employee payslips uploaded successfully.`, "success");
           fileInput.value = "";
+          document.getElementById('fileLabel').innerText = "📁 Click to Select Excel File (.xlsx)";
 
-        } catch (err) {
-          alert("Error processing whitelist file: " + err.message);
-          fileInput.value = "";
+        } catch (error) {
+          console.error("Upload error:", error);
+          showStatus("Error: " + error.message, "error");
+        } finally {
+          uploadBtn.disabled = false;
         }
       };
 
+      // Read file into browser memory as ArrayBuffer (no base64 overhead)
       reader.readAsArrayBuffer(file);
-    }
-
-    async function manuallyAddWhitelist() {
-      const input = prompt("Enter Employee ID to Whitelist:");
-      if (!input) return;
-
-      const rawVal = input.trim();
-      const cleaned = cleanEmpId(rawVal);
-
-      if (!cleaned) return alert("Invalid ID number.");
-
-      const existingDoc = await db.collection("whitelist").doc(cleaned).get();
-      if (existingDoc.exists) {
-        return alert(`REJECTED: ID Number '${rawVal}' is ALREADY present in the whitelist.`);
-      }
-
-      await db.collection("whitelist").doc(cleaned).set({
-        displayId: rawVal,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      alert(`ID '${rawVal}' successfully added to whitelist!`);
-    }
-
-    async function deleteWhitelistId(docId) {
-      if (confirm(`Remove ID '${docId}' from Whitelist?`)) {
-        await db.collection("whitelist").doc(docId).delete();
-      }
-    }
-
-    async function downloadWhitelistExcel() {
-      try {
-        const excelData = [["WHITELISTED EMPLOYEE ID"]];
-        const snapshot = await db.collection("whitelist").get();
-        snapshot.forEach(doc => {
-          excelData.push([doc.data().displayId || doc.id]);
-        });
-        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Whitelist");
-        XLSX.writeFile(workbook, "Whitelist_Export.xlsx");
-      } catch (err) {
-        alert("Error exporting whitelist: " + err.message);
-      }
-    }
-
-    /* --- DYNAMIC MAPPING BUILDER --- */
-    function openMappingModal(clientId) {
-      currentMappingClientId = clientId;
-      const client = clientsList.find(c => c.id === clientId);
-      document.getElementById("mappingModalTitle").innerText = `Map Columns for: ${client.name}`;
-
-      const mapping = client.mapping || {};
-
-      document.getElementById("empIdColInput").value = mapping.empIdCol || "F";
-      document.getElementById("empNameColInput").value = mapping.empNameCol || "G";
-
-      const earnings = (mapping.earnings && mapping.earnings.length > 0) ? mapping.earnings : DEFAULT_EARNINGS;
-      const deductions = (mapping.deductions && mapping.deductions.length > 0) ? mapping.deductions : DEFAULT_DEDUCTIONS;
-      const adjustments = (mapping.adjustments && mapping.adjustments.length > 0) ? mapping.adjustments : DEFAULT_ADJUSTMENTS;
-
-      renderEarningsSection(earnings);
-      renderStandardSection("deductionsList", deductions);
-      renderStandardSection("adjustmentsList", adjustments);
-
-      document.getElementById("grossPayColInput").value = mapping.grossPayCol || "BB";
-      document.getElementById("totalDeductionsColInput").value = mapping.totalDeductionsCol || "";
-      document.getElementById("totalAdjustmentsColInput").value = mapping.totalAdjustmentsCol || "";
-      document.getElementById("netPayColInput").value = mapping.netPayCol || "BD";
-
-      document.getElementById("mappingModal").style.display = "flex";
-    }
-
-    function renderEarningsSection(items) {
-      const container = document.getElementById("earningsList");
-      container.innerHTML = "";
-      items.forEach(item => {
-        addEarningsRow(item.label, item.unit, item.qtyCol, item.amtCol);
-      });
-    }
-
-    function addEarningsRow(label = "", unit = "HOURS", qtyCol = "", amtCol = "") {
-      const container = document.getElementById("earningsList");
-      const row = document.createElement("div");
-      row.className = "mapping-row";
-      row.draggable = true;
-
-      row.innerHTML = `
-        <span class="drag-handle" title="Drag to reorder">☰</span>
-        <input type="text" class="map-input-name" placeholder="TYPE NAME (E.G. REGULAR DAYS)" value="${label}">
-        <input type="text" class="map-input-unit" placeholder="UNIT (E.G. DAYS)" value="${unit}">
-        <input type="text" class="map-input-col map-input-qty" placeholder="QTY COL / FORMULA" value="${qtyCol}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="AMT COL / FORMULA" value="${amtCol}">
-        <button class="btn-icon-danger" onclick="removeMappingRow(this)" title="Delete Slot">×</button>
-      `;
-
-      setupDragAndDrop(row, container);
-      container.appendChild(row);
-    }
-
-    function renderStandardSection(containerId, items) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = "";
-      items.forEach(item => {
-        addStandardRow(containerId, item.label, item.unit, item.col);
-      });
-    }
-
-    function addStandardRow(containerId, label = "", unit = "AMOUNT", col = "") {
-      const container = document.getElementById(containerId);
-      const row = document.createElement("div");
-      row.className = "mapping-row";
-      row.draggable = true;
-
-      row.innerHTML = `
-        <span class="drag-handle" title="Drag to reorder">☰</span>
-        <input type="text" class="map-input-name" placeholder="ITEM NAME" value="${label}" style="flex: 2.2;">
-        <input type="text" class="map-input-unit" placeholder="UNIT" value="${unit}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="COL OR FORMULA (E.G. =A1+A2)" value="${col}">
-        <button class="btn-icon-danger" onclick="removeMappingRow(this)" title="Delete Slot">×</button>
-      `;
-
-      setupDragAndDrop(row, container);
-      container.appendChild(row);
-    }
-
-    function setupDragAndDrop(row, container) {
-      row.addEventListener("dragstart", (e) => {
-        draggedElement = row;
-        row.classList.add("dragging");
-        e.dataTransfer.effectAllowed = "move";
-      });
-
-      row.addEventListener("dragend", () => {
-        draggedElement = null;
-        row.classList.remove("dragging");
-      });
-
-      container.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        const afterElement = getDragAfterElement(container, e.clientY);
-        if (draggedElement && draggedElement.parentElement === container) {
-          if (afterElement == null) {
-            container.appendChild(draggedElement);
-          } else {
-            container.insertBefore(draggedElement, afterElement);
-          }
-        }
-      });
-    }
-
-    function getDragAfterElement(container, y) {
-      const draggableElements = [...container.querySelectorAll(".mapping-row:not(.dragging)")];
-      return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-          return { offset: offset, element: child };
-        } else {
-          return closest;
-        }
-      }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    function removeMappingRow(btn) {
-      btn.closest(".mapping-row").remove();
-    }
-
-    function closeMappingModal() {
-      document.getElementById("mappingModal").style.display = "none";
-      currentMappingClientId = null;
-    }
-
-    function extractEarningsData() {
-      const rows = document.querySelectorAll("#earningsList .mapping-row");
-      const items = [];
-      rows.forEach(r => {
-        const label = r.querySelector(".map-input-name").value.trim().toUpperCase();
-        const unit = r.querySelector(".map-input-unit").value.trim().toUpperCase();
-        const qtyCol = r.querySelector(".map-input-qty").value.trim().toUpperCase();
-        const amtCol = r.querySelector(".map-input-amt").value.trim().toUpperCase();
-        if (label || qtyCol || amtCol) {
-          items.push({ label, unit, qtyCol, amtCol });
-        }
-      });
-      return items;
-    }
-
-    function extractStandardData(containerId) {
-      const rows = document.querySelectorAll(`#${containerId} .mapping-row`);
-      const items = [];
-      rows.forEach(r => {
-        const label = r.querySelector(".map-input-name").value.trim().toUpperCase();
-        const unit = r.querySelector(".map-input-unit").value.trim().toUpperCase();
-        const col = r.querySelector(".map-input-amt").value.trim().toUpperCase();
-        if (label || col) {
-          items.push({ label, unit, col });
-        }
-      });
-      return items;
-    }
-
-    async function saveClientMapping() {
-      if (!currentMappingClientId) return;
-
-      const mappingData = {
-        empIdCol: document.getElementById("empIdColInput").value.trim().toUpperCase(),
-        empNameCol: document.getElementById("empNameColInput").value.trim().toUpperCase(),
-        earnings: extractEarningsData(),
-        grossPayCol: document.getElementById("grossPayColInput").value.trim().toUpperCase(),
-        deductions: extractStandardData("deductionsList"),
-        totalDeductionsCol: document.getElementById("totalDeductionsColInput").value.trim().toUpperCase(),
-        adjustments: extractStandardData("adjustmentsList"),
-        totalAdjustmentsCol: document.getElementById("totalAdjustmentsColInput").value.trim().toUpperCase(),
-        netPayCol: document.getElementById("netPayColInput").value.trim().toUpperCase(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      try {
-        await db.collection("clients").doc(currentMappingClientId).set({ mapping: mappingData }, { merge: true });
-        alert("Custom Column Mapping & Formulas saved successfully!");
-        closeMappingModal();
-      } catch (err) {
-        alert("Error saving mapping: " + err.message);
-      }
-    }
-
-    /* --- PAYSLIP PREVIEW --- */
-    function openPayslipPreview() {
-      const client = clientsList.find(c => c.id === currentMappingClientId);
-      
-      document.getElementById("prevClientTitle").innerText = client ? client.name : "TECDIA CEBU INC.";
-
-      const pDateInput = document.getElementById("authPayrollDate").value;
-      const pFromInput = document.getElementById("authPeriodFrom").value;
-      const pToInput = document.getElementById("authPeriodTo").value;
-
-      const displayPayrollDate = pDateInput ? formatDateDisplay(pDateInput) : "JULY 15, 2026";
-      const displayPeriod = (pFromInput && pToInput) 
-        ? `${formatDateDisplay(pFromInput)} - ${formatDateDisplay(pToInput)}` 
-        : "JUNE 26 - JULY 10, 2026";
-
-      document.getElementById("prevPayrollDateTitle").innerText = displayPayrollDate;
-      document.getElementById("prevPayrollPeriodTitle").innerText = displayPeriod;
-
-      const empIdCol = document.getElementById("empIdColInput").value.trim().toUpperCase() || "F";
-      const empNameCol = document.getElementById("empNameColInput").value.trim().toUpperCase() || "G";
-
-      document.getElementById("prevEmpId").innerText = `831016 (COL: ${empIdCol})`;
-      document.getElementById("prevEmpName").innerText = `COLES, BENJELEN (COL: ${empNameCol})`;
-
-      const earnings = extractEarningsData();
-      const deductions = extractStandardData("deductionsList");
-      const adjustments = extractStandardData("adjustmentsList");
-
-      renderEarningsPreview("prevEarningsBody", earnings);
-      renderStandardPreview("prevDeductionsBody", deductions);
-      renderStandardPreview("prevAdjustmentsBody", adjustments);
-
-      const grossCol = document.getElementById("grossPayColInput").value.trim().toUpperCase() || "BB";
-      const totalDedCol = document.getElementById("totalDeductionsColInput").value.trim().toUpperCase();
-      const totalAdjCol = document.getElementById("totalAdjustmentsColInput").value.trim().toUpperCase();
-      const netCol = document.getElementById("netPayColInput").value.trim().toUpperCase() || "BD";
-
-      document.getElementById("prevGrossVal").innerText = `15,450.00 (COL: ${grossCol})`;
-      document.getElementById("prevDedVal").innerText = totalDedCol ? `1,200.00 (COL: ${totalDedCol})` : `1,200.00`;
-      document.getElementById("prevAdjVal").innerText = totalAdjCol ? `3,000.00 (COL: ${totalAdjCol})` : `3,000.00`;
-      document.getElementById("prevNetVal").innerText = `17,250.00 (COL: ${netCol})`;
-
-      document.getElementById("previewModal").style.display = "flex";
-    }
-
-    function renderEarningsPreview(targetId, items) {
-      const tbody = document.getElementById(targetId);
-      tbody.innerHTML = "";
-      if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #a0aec0;">No mapped earnings items.</td></tr>`;
-        return;
-      }
-      items.forEach(item => {
-        const tr = document.createElement("tr");
-        const qtyColStr = item.qtyCol ? `(${item.qtyCol})` : '';
-        const amtColStr = item.amtCol ? `(${item.amtCol})` : '';
-        tr.innerHTML = `
-          <td><strong>${item.label || "---"}</strong></td>
-          <td style="text-align: center;">
-            11.00 <span style="font-size: 10px; color: #2b6cb0;">${qtyColStr}</span>
-          </td>
-          <td style="text-align: right; font-weight: bold;">
-            540.00 <span style="font-size: 10px; color: #2b6cb0;">${amtColStr}</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function renderStandardPreview(targetId, items) {
-      const tbody = document.getElementById(targetId);
-      tbody.innerHTML = "";
-      if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #a0aec0;">No mapped items.</td></tr>`;
-        return;
-      }
-      items.forEach(item => {
-        const tr = document.createElement("tr");
-        const colStr = item.col ? `(${item.col})` : '';
-        tr.innerHTML = `
-          <td><strong>${item.label || "---"}</strong></td>
-          <td style="text-align: right; font-weight: bold;">
-            1,500.00 <span style="font-size: 10px; color: #2b6cb0;">${colStr}</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function closePayslipPreview() {
-      document.getElementById("previewModal").style.display = "none";
-    }
-
-    /* --- UPLOAD PROCESS & EXCEL PARSING --- */
-    async function verifyAuthorizationAndUpload() {
-      const clientId = document.getElementById("authClientSelect").value;
-      const payrollDate = document.getElementById("authPayrollDate").value;
-      const periodFrom = document.getElementById("authPeriodFrom").value;
-      const periodTo = document.getElementById("authPeriodTo").value;
-      const rawEmpId = document.getElementById("authIdInput").value.trim();
-      const pin = document.getElementById("authPinInput").value.trim();
-
-      let missingFields = [];
-      if (!clientId) missingFields.push("Select Company / Client");
-      if (!payrollDate) missingFields.push("Payroll Date Box (Month-Day-Year)");
-      if (!periodFrom) missingFields.push("Payroll Period Box (From Date)");
-      if (!periodTo) missingFields.push("Payroll Period Box (Up To Date)");
-      if (!rawEmpId) missingFields.push("Employee ID");
-      if (!pin) missingFields.push("PIN");
-
-      if (missingFields.length > 0) {
-        alert("UPLOAD CANNOT PROCEED!\n\nThe following required field(s) are missing:\n\n• " + missingFields.join("\n• "));
-        return;
-      }
-
-      try {
-        const cleanedId = cleanEmpId(rawEmpId);
-        const empDoc = await db.collection("employees").doc(cleanedId).get();
-        if (!empDoc.exists) return alert("AUTHORIZATION FAILED: Invalid Employee ID.");
-
-        const empData = empDoc.data();
-        if (empData.pin !== pin) return alert("AUTHORIZATION FAILED: Incorrect PIN.");
-        if (empData.canOverride !== true) return alert("ACCESS DENIED: You do not have Upload/Override permissions.");
-
-        const clientObj = clientsList.find(c => c.id === clientId);
-
-        activeAuthorizedEmp = { 
-          id: cleanedId, 
-          clientId: clientId,
-          clientName: clientObj ? clientObj.name : "CLIENT",
-          payrollDate: payrollDate,
-          payrollDateStr: formatDateDisplay(payrollDate),
-          periodFrom: periodFrom,
-          periodTo: periodTo,
-          payrollPeriodStr: `${formatDateDisplay(periodFrom)} - ${formatDateDisplay(periodTo)}`
-        };
-
-        document.getElementById("publicPayrollFileInput").click();
-
-      } catch (err) {
-        alert("Verification error: " + err.message);
-      }
-    }
-
-    async function handlePublicPayrollUpload() {
-      const fileInput = document.getElementById("publicPayrollFileInput");
-      const file = fileInput.files[0];
-      if (!file || !activeAuthorizedEmp) return;
-
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        try {
-          const arrayBuffer = e.target.result;
-          
-          currentUploadFileData = {
-            fileName: file.name,
-            fileBase64: arrayBufferToBase64(arrayBuffer)
-          };
-
-          const data = new Uint8Array(arrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array', raw: false });
-
-          if (!workbook.SheetNames.includes("PAYROLL")) {
-            alert("SECURITY REJECTED: Worksheet named 'PAYROLL' not found in file.");
-            fileInput.value = "";
-            return;
-          }
-
-          const worksheet = workbook.Sheets["PAYROLL"];
-
-          const a1 = String(getCellValue(worksheet, "A", 1) || "").trim();
-          const a2 = String(getCellValue(worksheet, "A", 2) || "").trim();
-          const a3 = String(getCellValue(worksheet, "A", 3) || "").trim();
-          const a4 = String(getCellValue(worksheet, "A", 4) || "").trim();
-
-          if (!a1 || !a2 || !a3 || !a4) {
-            alert("SECURITY REJECTED: Cells A1, A2, A3, and A4 must contain text data.");
-            fileInput.value = "";
-            return;
-          }
-
-          const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
-          const batchDoc = await db.collection("payroll_batches").doc(batchId).get();
-
-          pendingPayrollWorksheet = worksheet;
-
-          if (batchDoc.exists) {
-            document.getElementById("dupClientText").innerText = activeAuthorizedEmp.clientName;
-            document.getElementById("dupDateText").innerText = activeAuthorizedEmp.payrollDateStr;
-            document.getElementById("overrideEmpIdInput").value = activeAuthorizedEmp.id;
-            document.getElementById("overridePinInput").value = "";
-            document.getElementById("overrideAuthModal").style.display = "flex";
-            return;
-          }
-
-          await executePayrollProcessing(worksheet, "UPLOAD", activeAuthorizedEmp.id);
-
-        } catch (err) {
-          alert("Error processing Excel file: " + err.message);
-          fileInput.value = "";
-        }
-      };
-
-      reader.readAsArrayBuffer(file);
-    }
-
-    function cancelOverrideUpload() {
-      pendingPayrollWorksheet = null;
-      currentUploadFileData = null;
-      document.getElementById("overrideAuthModal").style.display = "none";
-      document.getElementById("publicPayrollFileInput").value = "";
-    }
-
-    async function verifyAndExecuteOverride() {
-      const authId = document.getElementById("overrideEmpIdInput").value.trim();
-      const authPin = document.getElementById("overridePinInput").value.trim();
-
-      if (!authId || !authPin) {
-        alert("Please provide Authorized Employee ID and PIN to override.");
-        return;
-      }
-
-      try {
-        const cleanedId = cleanEmpId(authId);
-        const empDoc = await db.collection("employees").doc(cleanedId).get();
-        if (!empDoc.exists) return alert("REJECTED: Employee ID not found.");
-
-        const empData = empDoc.data();
-        if (empData.pin !== authPin) return alert("REJECTED: Incorrect PIN.");
-        if (empData.canOverride !== true) return alert("REJECTED: This ID does not have Override permissions.");
-
-        document.getElementById("overrideAuthModal").style.display = "none";
-        await executePayrollProcessing(pendingPayrollWorksheet, "OVERRIDE", cleanedId);
-        pendingPayrollWorksheet = null;
-
-      } catch (err) {
-        alert("Authorization Error: " + err.message);
-      }
-    }
-
-    async function executePayrollProcessing(worksheet, actionType, uploaderId) {
-      const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
-      const mapping = (clientObj && clientObj.mapping) ? clientObj.mapping : {};
-
-      const empIdCol = mapping.empIdCol || "F";
-      const empNameCol = mapping.empNameCol || "G";
-      const earningsSchema = mapping.earnings || DEFAULT_EARNINGS;
-      const deductionsSchema = mapping.deductions || DEFAULT_DEDUCTIONS;
-      const totalDeductionsCol = mapping.totalDeductionsCol || "";
-      const adjustmentsSchema = mapping.adjustments || DEFAULT_ADJUSTMENTS;
-      const totalAdjustmentsCol = mapping.totalAdjustmentsCol || "";
-      const grossPayCol = mapping.grossPayCol || "BB";
-      const netPayCol = mapping.netPayCol || "BD";
-
-      const range = XLSX.utils.decode_range(worksheet['!ref']);
-      const totalRows = range.e.r + 1;
-
-      let batch = db.batch();
-      let count = 0;
-      let totalUploaded = 0;
-
-      for (let r = 8; r <= totalRows; r++) {
-        const empName = String(getCellValue(worksheet, empNameCol, r) || getCellValue(worksheet, "G", r) || "").trim();
-        if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
-
-        const rawId = String(getCellValue(worksheet, empIdCol, r) || getCellValue(worksheet, "F", r) || getCellValue(worksheet, "A", r) || "").trim();
-        const cleanedId = cleanEmpId(rawId);
-        if (!cleanedId) continue;
-
-        const earningsItems = earningsSchema.map(item => ({
-          label: item.label,
-          unit: item.unit,
-          qtyCol: item.qtyCol,
-          amtCol: item.amtCol,
-          qtyVal: evaluateFormulaOrCol(item.qtyCol, worksheet, r),
-          amtVal: evaluateFormulaOrCol(item.amtCol, worksheet, r)
-        }));
-
-        const deductionItems = deductionsSchema.map(item => ({
-          label: item.label,
-          unit: item.unit,
-          col: item.col,
-          val: evaluateFormulaOrCol(item.col, worksheet, r)
-        }));
-
-        let calculatedDeductions = 0;
-        deductionItems.forEach(d => calculatedDeductions += d.val);
-        const finalTotalDeductions = totalDeductionsCol ? evaluateFormulaOrCol(totalDeductionsCol, worksheet, r) : calculatedDeductions;
-
-        let calculatedAdjustments = 0;
-        const adjustmentItems = adjustmentsSchema.map(item => {
-          const val = evaluateFormulaOrCol(item.col, worksheet, r);
-          calculatedAdjustments += val;
-          return {
-            label: item.label,
-            unit: item.unit,
-            col: item.col,
-            val: val
-          };
-        });
-        const finalTotalAdjustments = totalAdjustmentsCol ? evaluateFormulaOrCol(totalAdjustmentsCol, worksheet, r) : calculatedAdjustments;
-
-        const finalGrossPay = evaluateFormulaOrCol(grossPayCol, worksheet, r);
-        const finalNetPay = evaluateFormulaOrCol(netPayCol, worksheet, r);
-
-        const payslipPayload = {
-          empId: cleanedId,
-          rawEmpId: rawId,
-          empName: empName,
-          agencyName: "INT'L. MANPOWER ESSENTIALS, INC.",
-          clientName: activeAuthorizedEmp.clientName,
-          
-          payrollDateRaw: activeAuthorizedEmp.payrollDate,
-          payrollDateStr: activeAuthorizedEmp.payrollDateStr,
-          payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
-          payrollPeriodTo: activeAuthorizedEmp.periodTo,
-          payrollPeriodStr: activeAuthorizedEmp.payrollPeriodStr,
-
-          earningsItems: earningsItems,
-          deductionItems: deductionItems,
-          adjustmentItems: adjustmentItems,
-
-          grossPay: finalGrossPay,
-          totalDeductions: finalTotalDeductions,
-          totalAdjustments: finalTotalAdjustments,
-          netPay: finalNetPay,
-
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        const docRef = db.collection("payslips").doc(cleanedId);
-        batch.set(docRef, payslipPayload, { merge: true });
-
-        count++;
-        totalUploaded++;
-
-        if (count === 400) {
-          await batch.commit();
-          batch = db.batch();
-          count = 0;
-        }
-      }
-
-      const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
-      const batchRef = db.collection("payroll_batches").doc(batchId);
-      batch.set(batchRef, {
-        client: activeAuthorizedEmp.clientName,
-        payrollDate: activeAuthorizedEmp.payrollDateStr,
-        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
-        uploadedBy: uploaderId,
-        uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      count++;
-
-      const historyRef = db.collection("payroll_history").doc();
-      batch.set(historyRef, {
-        uploaderId: uploaderId,
-        clientName: activeAuthorizedEmp.clientName,
-        payrollDate: activeAuthorizedEmp.payrollDateStr,
-        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
-        status: actionType,
-        fileName: currentUploadFileData ? currentUploadFileData.fileName : "Payroll_Upload.xlsx",
-        fileBase64: currentUploadFileData ? currentUploadFileData.fileBase64 : "",
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      count++;
-
-      if (count > 0) await batch.commit();
-
-      alert(`SUCCESS: Processed and saved ${totalUploaded} employee payslips.\nAction recorded as [${actionType}].`);
-      document.getElementById("publicPayrollFileInput").value = "";
-      currentUploadFileData = null;
-      showLandingScreen();
-    }
-
-    /* --- HISTORY MODAL & DOWNLOADS --- */
-    function openHistoryModal() {
-      document.getElementById("historyModal").style.display = "flex";
-      loadHistoryLogs();
-    }
-
-    function closeHistoryModal() {
-      document.getElementById("historyModal").style.display = "none";
-    }
-
-    function loadHistoryLogs() {
-      const tbody = document.getElementById("historyTableBody");
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Loading history...</td></tr>`;
-
-      db.collection("payroll_history")
-        .orderBy("timestamp", "desc")
-        .get()
-        .then(snapshot => {
-          tbody.innerHTML = "";
-          if (snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #718096;">No history recorded yet.</td></tr>`;
-            return;
-          }
-
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            const dateStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : "N/A";
-            const badgeClass = data.status === "OVERRIDE" ? "status-override" : "status-upload";
-            const displayStatus = data.status === "OVERRIDE" ? "OVERRIDDEN" : "UPLOADED";
-
-            const downloadBtn = data.fileBase64 
-              ? `<button class="btn-success" style="padding: 4px 10px; font-size: 11px;" onclick="downloadHistoryFile('${doc.id}')">DOWNLOAD</button>` 
-              : `<span style="color: #a0aec0; font-size: 11px;">N/A</span>`;
-
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-              <td><strong>${data.uploaderId || "---"}</strong></td>
-              <td>${data.clientName || "---"}</td>
-              <td>${data.payrollDate || "---"}</td>
-              <td>${data.payrollPeriod || "---"}</td>
-              <td><span class="status-badge ${badgeClass}">${displayStatus}</span></td>
-              <td>${dateStr}</td>
-              <td style="text-align: center;">${downloadBtn}</td>
-            `;
-            tbody.appendChild(tr);
-          });
-        })
-        .catch(err => {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Error loading history: ${err.message}</td></tr>`;
-        });
-    }
-
-    async function downloadHistoryFile(docId) {
-      try {
-        const doc = await db.collection("payroll_history").doc(docId).get();
-        if (!doc.exists) return alert("File record not found.");
-        
-        const data = doc.data();
-        if (!data.fileBase64) return alert("No download file attached to this log entry.");
-
-        const byteCharacters = atob(data.fileBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = data.fileName || `Payroll_${data.clientName || 'Export'}_${data.payrollDate || 'Date'}.xlsx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-      } catch (err) {
-        alert("Error downloading file: " + err.message);
-      }
-    }
-
-    function triggerExcelUpload() { document.getElementById("excelFileInput").click(); }
-
-    async function handleFileSelected() {
-      const fileInput = document.getElementById("excelFileInput");
-      const file = fileInput.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', raw: false });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-
-          const cellA1 = String(getCellValue(worksheet, "A", 1) || "").trim().toUpperCase();
-          const cellB1 = String(getCellValue(worksheet, "B", 1) || "").trim().toUpperCase();
-
-          if (cellA1 !== "ID" || cellB1 !== "PIN") {
-            alert("SECURITY REJECTED: Header A1 must be 'ID' and B1 must be 'PIN'.");
-            fileInput.value = "";
-            return;
-          }
-
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-          let batch = db.batch();
-          let count = 0;
-          let totalUploaded = 0;
-          let invalidPins = 0;
-
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length < 2) continue;
-
-            const rawId = String(row[0] || "").trim();
-            const rawPin = String(row[1] || "").trim();
-            const cleanedId = cleanEmpId(rawId);
-
-            if (!cleanedId || !rawPin) continue;
-
-            if (!/^\d{6}$/.test(rawPin)) {
-              invalidPins++;
-              continue;
-            }
-
-            const docRef = db.collection("employees").doc(cleanedId);
-            batch.set(docRef, {
-              empId: cleanedId,
-              displayId: rawId,
-              pin: rawPin,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
-            count++;
-            totalUploaded++;
-
-            if (count === 400) {
-              await batch.commit();
-              batch = db.batch();
-              count = 0;
-            }
-          }
-
-          if (count > 0) await batch.commit();
-
-          let msg = `SUCCESS: Uploaded ${totalUploaded} employee records.`;
-          if (invalidPins > 0) msg += `\n(${invalidPins} skipped: PIN was not 6 digits)`;
-          alert(msg);
-          fileInput.value = "";
-
-        } catch (err) {
-          alert("Error processing file: " + err.message);
-          fileInput.value = "";
-        }
-      };
-
-      reader.readAsArrayBuffer(file);
-    }
-
-    async function downloadEmployeeExcel() {
-      try {
-        const excelData = [["ID", "PIN"]];
-        const snapshot = await db.collection("employees").get();
-        snapshot.forEach(doc => {
-          excelData.push([doc.data().displayId || doc.id, String(doc.data().pin || "")]);
-        });
-        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
-        XLSX.writeFile(workbook, "Employee_Credentials.xlsx");
-      } catch (err) {
-        alert("Error: " + err.message);
-      }
-    }
-
-    function loadEmployees() {
-      db.collection("employees").onSnapshot(snapshot => {
-        allEmployees = [];
-        snapshot.forEach(doc => allEmployees.push({ empId: doc.id, ...doc.data() }));
-        renderEmployees(allEmployees);
-      });
-    }
-
-    function renderEmployees(list) {
-      const tbody = document.getElementById("employeeBody");
-      tbody.innerHTML = "";
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #718096;">No employees found.</td></tr>`;
-        return;
-      }
-      list.forEach(emp => {
-        const tr = document.createElement("tr");
-        const canOverride = emp.canOverride === true;
-        const displayId = emp.displayId || emp.empId;
-        tr.innerHTML = `
-          <td><strong>${displayId}</strong></td>
-          <td>${emp.empName || "---"}</td>
-          <td><span class="pin-badge">${emp.pin || "NO PIN"}</span></td>
-          <td>
-            <input type="checkbox" ${canOverride ? "checked" : ""} onchange="toggleOverridePermission('${emp.empId}', this.checked)">
-            Can Upload / Override
-          </td>
-          <td style="text-align: right;">
-            <button class="btn-dark" onclick="manualEditPin('${emp.empId}')">Edit PIN</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function toggleOverridePermission(empId, isAllowed) {
-      await db.collection("employees").doc(empId).set({ canOverride: isAllowed }, { merge: true });
-    }
-
-    async function manualEditPin(empId) {
-      const pin = prompt(`Enter new PIN for ID ${empId}:`);
-      if (pin && /^\d{6}$/.test(pin)) {
-        await db.collection("employees").doc(empId).set({ pin: pin }, { merge: true });
-      } else if (pin) {
-        alert("PIN must be 6 digits.");
-      }
-    }
-
-    function filterAllTables() {
-      const q = cleanEmpId(document.getElementById("searchInput").value);
-      renderEmployees(allEmployees.filter(e => {
-        return cleanEmpId(e.empId).includes(q) || cleanEmpId(e.displayId || '').includes(q) || (e.empName || "").toUpperCase().includes(q);
-      }));
     }
   </script>
 </body>
