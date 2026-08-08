@@ -20,7 +20,7 @@
     .btn-warning { background: #dd6b20; } .btn-warning:hover { background: #c05621; }
     .btn-dark { background: #4a5568; } .btn-dark:hover { background: #2d3748; }
 
-    #landingCard, #loginCard, #uploadAuthCard { max-width: 450px; margin: 40px auto; }
+    #landingCard, #loginCard, #uploadAuthCard { max-width: 480px; margin: 40px auto; }
     #adminDashboard, #loginCard, #uploadAuthCard { display: none; }
     
     .dashboard-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px; }
@@ -42,9 +42,26 @@
     .status-override { background: #feebc8; color: #744210; }
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 95%; max-width: 850px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
-    .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    /* MAPPING BUILDER STYLES */
+    .mapping-section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; margin: 18px 0 8px 0; font-weight: bold; font-size: 13px; }
+    .header-earnings { background: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
+    .header-gross { background: #bbdefb; color: #0d47a1; border-left: 4px solid #0d47a1; }
+    .header-deductions { background: #fff3e0; color: #e65100; border-left: 4px solid #e65100; }
+    .header-adjustments { background: #f3e5f5; color: #6a1b9a; border-left: 4px solid #6a1b9a; }
+    .header-net { background: #e8f5e9; color: #1b5e20; border-left: 4px solid #1b5e20; }
+
+    .mapping-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; min-height: 10px; }
+    .mapping-row { display: flex; gap: 8px; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; cursor: move; }
+    .mapping-row.dragging { opacity: 0.4; border: 2px dashed #3182ce; }
+    .drag-handle { cursor: grab; font-weight: bold; color: #a0aec0; padding: 0 6px; font-size: 16px; user-select: none; }
+    .map-input-name { flex: 2; text-transform: uppercase; }
+    .map-input-unit { flex: 1.2; text-transform: uppercase; }
+    .map-input-col { flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; }
+    .btn-icon-danger { background: #fed7d7; color: #9b2c2c; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-weight: bold; }
+    .btn-icon-danger:hover { background: #feb2b2; }
+
     .duplicate-info-box { background: #fff5f5; border: 1px solid #feb2b2; padding: 12px; border-radius: 6px; margin: 15px 0; font-size: 13px; color: #9b2c2c; }
   </style>
 
@@ -86,21 +103,44 @@
   <!-- UPLOAD PAYROLL AUTHORIZATION CARD -->
   <div id="uploadAuthCard" class="container">
     <h2 style="text-align: center; margin-top: 0;">PAYROLL UPLOAD AUTHORIZATION</h2>
+    
     <div class="input-group">
       <label>SELECT COMPANY / CLIENT</label>
       <select id="authClientSelect">
         <option value="">-- SELECT CLIENT --</option>
       </select>
     </div>
+
+    <!-- PAYROLL DAY BOX -->
+    <div class="input-group">
+      <label>PAYROLL DAY (MONTH - DAY - YEAR)</label>
+      <input type="date" id="authPayrollDate">
+    </div>
+
+    <!-- PAYROLL PERIOD BOXES -->
+    <div style="display: flex; gap: 10px;">
+      <div class="input-group" style="flex: 1;">
+        <label>PAYROLL PERIOD (FROM)</label>
+        <input type="date" id="authPeriodFrom">
+      </div>
+      <div class="input-group" style="flex: 1;">
+        <label>PAYROLL PERIOD (UP TO)</label>
+        <input type="date" id="authPeriodTo">
+      </div>
+    </div>
+
     <div class="input-group">
       <label>EMPLOYEE ID</label>
       <input type="text" id="authIdInput" placeholder="ENTER ID">
     </div>
+    
     <div class="input-group">
       <label>PIN</label>
       <input type="password" id="authPinInput" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
     </div>
+
     <input type="file" id="publicPayrollFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handlePublicPayrollUpload()">
+    
     <div style="display: flex; gap: 10px;">
       <button class="btn-dark" style="width: 30%;" onclick="showLandingScreen()">BACK</button>
       <button class="btn-success" style="width: 70%;" onclick="verifyAuthorizationAndUpload()">AUTHORIZE & SELECT FILE</button>
@@ -192,13 +232,56 @@
     </table>
   </div>
 
-  <!-- COLUMN MAPPING MODAL -->
+  <!-- DYNAMIC COLUMN MAPPING MODAL -->
   <div id="mappingModal" class="modal-overlay">
     <div class="modal-content">
-      <h3 id="mappingModalTitle" style="margin-top: 0; color: #2b6cb0;">Map Columns for Client</h3>
-      <p style="font-size: 12px; color: #718096;">Specify Excel column letters for each item in this client's payroll sheet.</p>
-      <div class="mapping-grid" id="mappingFormGrid"></div>
-      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+      <h3 id="mappingModalTitle" style="margin-top: 0; color: #2b6cb0;">Custom Column Mapping</h3>
+      <p style="font-size: 12px; color: #718096; margin-bottom: 15px;">Customize item names, units, and column letters. Drag rows (☰) to reorder sequence within any category.</p>
+
+      <!-- 1. EARNINGS SECTION -->
+      <div class="mapping-section-header header-earnings">
+        <span>EARNINGS SECTION</span>
+        <button class="btn-success" style="padding: 4px 10px; font-size: 11px;" onclick="addMappingRow('earningsList')">+ ADD EARNINGS SLOT</button>
+      </div>
+      <div class="mapping-list" id="earningsList"></div>
+
+      <!-- 2. GROSS PAY (FIXED POSITION) -->
+      <div class="mapping-section-header header-gross">
+        <span>GROSS PAY (STAYS AFTER EARNINGS)</span>
+      </div>
+      <div class="mapping-row" style="cursor: default; background: #ebf8ff;">
+        <span style="width: 25px;"></span>
+        <input type="text" value="GROSS PAY" readonly style="flex: 3.2; font-weight: bold; background: #e2e8f0;">
+        <input type="text" id="grossPayColInput" placeholder="EXCEL COL (E.G. BB)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold;">
+        <span style="width: 38px;"></span>
+      </div>
+
+      <!-- 3. DEDUCTIONS SECTION -->
+      <div class="mapping-section-header header-deductions">
+        <span>DEDUCTION SECTION (FOLLOWS GROSS PAY)</span>
+        <button class="btn-warning" style="padding: 4px 10px; font-size: 11px;" onclick="addMappingRow('deductionsList')">+ ADD DEDUCTION SLOT</button>
+      </div>
+      <div class="mapping-list" id="deductionsList"></div>
+
+      <!-- 4. ADJUSTMENTS SECTION -->
+      <div class="mapping-section-header header-adjustments">
+        <span>ADJUSTMENTS SECTION</span>
+        <button class="btn-dark" style="padding: 4px 10px; font-size: 11px;" onclick="addMappingRow('adjustmentsList')">+ ADD ADJUSTMENT SLOT</button>
+      </div>
+      <div class="mapping-list" id="adjustmentsList"></div>
+
+      <!-- 5. NET TAKE HOME (FIXED POSITION AT BOTTOM) -->
+      <div class="mapping-section-header header-net">
+        <span>NET TAKE HOME (STAYS AT THE BOTTOM)</span>
+      </div>
+      <div class="mapping-row" style="cursor: default; background: #e6fffa;">
+        <span style="width: 25px;"></span>
+        <input type="text" value="NET PAY" readonly style="flex: 3.2; font-weight: bold; background: #e2e8f0;">
+        <input type="text" id="netPayColInput" placeholder="EXCEL COL (E.G. BD)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold;">
+        <span style="width: 38px;"></span>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
         <button onclick="closeMappingModal()" style="background: #a0aec0;">CANCEL</button>
         <button class="btn-success" onclick="saveClientMapping()">SAVE MAPPING</button>
       </div>
@@ -276,41 +359,45 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    const MAPPING_FIELDS = [
-      { key: "regularDaysHoursCol", label: "REGULAR DAYS (Hours/Days)" },
-      { key: "regularDaysAmountCol", label: "REGULAR DAYS (Amount)" },
-      { key: "regOtHoursCol", label: "REG OT (Hours)" },
-      { key: "regOtAmountCol", label: "REG OT (Amount)" },
-      { key: "npHoursCol", label: "NP (Night Diff Hours)" },
-      { key: "npAmountCol", label: "NP (Night Diff Amount)" },
-      { key: "regOtNpHoursCol", label: "REG OT NP (Hours)" },
-      { key: "regOtNpAmountCol", label: "REG OT NP (Amount)" },
-      { key: "restDayHoursCol", label: "REST DAY (Hours)" },
-      { key: "restDayAmountCol", label: "REST DAY (Amount)" },
-      { key: "restDayOtHoursCol", label: "REST DAY OT (Hours)" },
-      { key: "restDayOtAmountCol", label: "REST DAY OT (Amount)" },
-      { key: "restDayNpHoursCol", label: "REST DAY NP (Hours)" },
-      { key: "restDayNpAmountCol", label: "REST DAY NP (Amount)" },
-      { key: "restDayNpOtHoursCol", label: "REST DAY NP OT (Hours)" },
-      { key: "restDayNpOtAmountCol", label: "REST DAY NP OT (Amount)" },
-      { key: "leaveWithPayCol", label: "LEAVE WITH PAY" },
-      { key: "grossPayCol", label: "GROSS PAY" },
-      { key: "welfareCol", label: "WELFARE" },
-      { key: "healthInsurancePremiumCol", label: "HEALTH INSURANCE PREMIUM" },
-      { key: "insuranceCardCol", label: "INSURANCE CARD" },
-      { key: "miscCol", label: "MISC." },
-      { key: "medicalCol", label: "MEDICAL" },
-      { key: "salaryLoan1Col", label: "SALARY LOAN 1" },
-      { key: "salaryLoan2Col", label: "SALARY LOAN 2" },
-      { key: "salaryLoan3Col", label: "SALARY LOAN 3" },
-      { key: "sssLoanCol", label: "SSS LOAN" },
-      { key: "sssCalamityLoanCol", label: "SSS CALAMITY LOAN" },
-      { key: "hdmfLoanCol", label: "HDMF LOAN" },
-      { key: "hdmfCalamityLoanCol", label: "HDMF CALAMITY LOAN" },
-      { key: "totalDeductionCol", label: "TOTAL DEDUCTION" },
-      { key: "payrollAdjustmentCol", label: "PAYROLL ADJUSTMENT" },
-      { key: "refundSalaryCol", label: "REFUND SALARY" },
-      { key: "netPayCol", label: "NET PAY" }
+    // DEFAULT MAPPING PRESET FOR NEW CLIENTS
+    const DEFAULT_EARNINGS = [
+      { label: "REGULAR DAYS", unit: "HOURS/DAYS", col: "AQ" },
+      { label: "REGULAR DAYS", unit: "AMOUNT", col: "AS" },
+      { label: "REG OT", unit: "HOURS", col: "AT" },
+      { label: "REG OT", unit: "AMOUNT", col: "AU" },
+      { label: "NP (NIGHT DIFF)", unit: "HOURS", col: "AV" },
+      { label: "NP (NIGHT DIFF)", unit: "AMOUNT", col: "AW" },
+      { label: "REG OT NP", unit: "HOURS", col: "AX" },
+      { label: "REG OT NP", unit: "AMOUNT", col: "AY" },
+      { label: "REST DAY", unit: "HOURS", col: "BV" },
+      { label: "REST DAY", unit: "AMOUNT", col: "BW" },
+      { label: "REST DAY OT", unit: "HOURS", col: "BX" },
+      { label: "REST DAY OT", unit: "AMOUNT", col: "BY" },
+      { label: "REST DAY NP", unit: "HOURS", col: "BZ" },
+      { label: "REST DAY NP", unit: "AMOUNT", col: "CA" },
+      { label: "REST DAY NP OT", unit: "HOURS", col: "CB" },
+      { label: "REST DAY NP OT", unit: "AMOUNT", col: "CC" },
+      { label: "LEAVE WITH PAY", unit: "AMOUNT", col: "" }
+    ];
+
+    const DEFAULT_DEDUCTIONS = [
+      { label: "WELFARE", unit: "AMOUNT", col: "" },
+      { label: "HEALTH INSURANCE PREMIUM", unit: "AMOUNT", col: "" },
+      { label: "INSURANCE CARD", unit: "AMOUNT", col: "" },
+      { label: "MISC.", unit: "AMOUNT", col: "" },
+      { label: "MEDICAL", unit: "AMOUNT", col: "" },
+      { label: "SALARY LOAN 1", unit: "AMOUNT", col: "" },
+      { label: "SALARY LOAN 2", unit: "AMOUNT", col: "" },
+      { label: "SALARY LOAN 3", unit: "AMOUNT", col: "" },
+      { label: "SSS LOAN", unit: "AMOUNT", col: "" },
+      { label: "SSS CALAMITY LOAN", unit: "AMOUNT", col: "" },
+      { label: "HDMF LOAN", unit: "AMOUNT", col: "" },
+      { label: "HDMF CALAMITY LOAN", unit: "AMOUNT", col: "" }
+    ];
+
+    const DEFAULT_ADJUSTMENTS = [
+      { label: "PAYROLL ADJUSTMENT", unit: "AMOUNT", col: "" },
+      { label: "REFUND SALARY", unit: "AMOUNT", col: "" }
     ];
 
     let clientsList = [];
@@ -320,6 +407,7 @@
     let currentOverrideEmpId = null;
     let allPendingRequests = [];
     let allEmployees = [];
+    let draggedElement = null;
 
     function showLandingScreen() {
       document.getElementById("landingCard").style.display = "block";
@@ -435,25 +523,95 @@
       }
     }
 
+    /* --- DYNAMIC MAPPING & DRAG AND DROP SYSTEM --- */
     function openMappingModal(clientId) {
       currentMappingClientId = clientId;
       const client = clientsList.find(c => c.id === clientId);
       document.getElementById("mappingModalTitle").innerText = `Map Columns for: ${client.name}`;
 
-      const grid = document.getElementById("mappingFormGrid");
-      grid.innerHTML = "";
       const mapping = client.mapping || {};
 
-      MAPPING_FIELDS.forEach(field => {
-        const val = mapping[field.key] || "";
-        grid.innerHTML += `
-          <div class="input-group">
-            <label>${field.label}</label>
-            <input type="text" id="map_${field.key}" value="${val}" placeholder="Column Letter (e.g. AQ)" style="text-transform: uppercase;">
-          </div>
-        `;
-      });
+      const earnings = (mapping.earnings && mapping.earnings.length > 0) ? mapping.earnings : DEFAULT_EARNINGS;
+      const deductions = (mapping.deductions && mapping.deductions.length > 0) ? mapping.deductions : DEFAULT_DEDUCTIONS;
+      const adjustments = (mapping.adjustments && mapping.adjustments.length > 0) ? mapping.adjustments : DEFAULT_ADJUSTMENTS;
+
+      renderMappingSection("earningsList", earnings);
+      renderMappingSection("deductionsList", deductions);
+      renderMappingSection("adjustmentsList", adjustments);
+
+      document.getElementById("grossPayColInput").value = mapping.grossPayCol || "BB";
+      document.getElementById("netPayColInput").value = mapping.netPayCol || "";
+
       document.getElementById("mappingModal").style.display = "flex";
+    }
+
+    function renderMappingSection(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      items.forEach(item => {
+        addMappingRow(containerId, item.label, item.unit, item.col);
+      });
+    }
+
+    function addMappingRow(containerId, label = "", unit = "", col = "") {
+      const container = document.getElementById(containerId);
+      const row = document.createElement("div");
+      row.className = "mapping-row";
+      row.draggable = true;
+
+      row.innerHTML = `
+        <span class="drag-handle" title="Drag to reorder">☰</span>
+        <input type="text" class="map-input-name" placeholder="ITEM NAME (E.G. REGULAR DAYS)" value="${label}">
+        <input type="text" class="map-input-unit" placeholder="UNIT (E.G. HOURS)" value="${unit}">
+        <input type="text" class="map-input-col" placeholder="EXCEL COL" value="${col}">
+        <button class="btn-icon-danger" onclick="removeMappingRow(this)" title="Delete Slot">×</button>
+      `;
+
+      row.addEventListener("dragstart", (e) => {
+        draggedElement = row;
+        row.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+
+      row.addEventListener("dragend", () => {
+        draggedElement = null;
+        row.classList.remove("dragging");
+      });
+
+      container.appendChild(row);
+      setupContainerDragOver(container);
+    }
+
+    function setupContainerDragOver(container) {
+      container.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const afterElement = getDragAfterElement(container, e.clientY);
+        if (draggedElement && draggedElement.parentElement === container) {
+          if (afterElement == null) {
+            container.appendChild(draggedElement);
+          } else {
+            container.insertBefore(draggedElement, afterElement);
+          }
+        }
+      });
+    }
+
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll(".mapping-row:not(.dragging)")];
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function removeMappingRow(btn) {
+      btn.closest(".mapping-row").remove();
     }
 
     function closeMappingModal() {
@@ -461,30 +619,63 @@
       currentMappingClientId = null;
     }
 
+    function extractSectionData(containerId) {
+      const rows = document.querySelectorAll(`#${containerId} .mapping-row`);
+      const items = [];
+      rows.forEach(r => {
+        const label = r.querySelector(".map-input-name").value.trim().toUpperCase();
+        const unit = r.querySelector(".map-input-unit").value.trim().toUpperCase();
+        const col = r.querySelector(".map-input-col").value.trim().toUpperCase();
+        if (label || col) {
+          items.push({ label, unit, col });
+        }
+      });
+      return items;
+    }
+
     async function saveClientMapping() {
       if (!currentMappingClientId) return;
-      const mappingData = {};
-      MAPPING_FIELDS.forEach(field => {
-        const inputVal = document.getElementById(`map_${field.key}`).value.trim().toUpperCase();
-        mappingData[field.key] = inputVal;
-      });
+
+      const mappingData = {
+        earnings: extractSectionData("earningsList"),
+        grossPayCol: document.getElementById("grossPayColInput").value.trim().toUpperCase(),
+        deductions: extractSectionData("deductionsList"),
+        adjustments: extractSectionData("adjustmentsList"),
+        netPayCol: document.getElementById("netPayColInput").value.trim().toUpperCase(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
 
       try {
         await db.collection("clients").doc(currentMappingClientId).set({ mapping: mappingData }, { merge: true });
-        alert("Column mapping saved successfully!");
+        alert("Custom Column Mapping saved successfully!");
         closeMappingModal();
       } catch (err) {
         alert("Error saving mapping: " + err.message);
       }
     }
 
+    /* --- STRICT FORM VALIDATION FOR UPLOAD AUTHORIZATION --- */
     async function verifyAuthorizationAndUpload() {
       const clientId = document.getElementById("authClientSelect").value;
+      const payrollDate = document.getElementById("authPayrollDate").value;
+      const periodFrom = document.getElementById("authPeriodFrom").value;
+      const periodTo = document.getElementById("authPeriodTo").value;
       const empId = document.getElementById("authIdInput").value.trim();
       const pin = document.getElementById("authPinInput").value.trim();
 
-      if (!clientId) return alert("Please select a Company / Client.");
-      if (!empId || !pin) return alert("Please enter Employee ID and PIN.");
+      // Check which required inputs are missing
+      let missingFields = [];
+      if (!clientId) missingFields.push("Select Company / Client");
+      if (!payrollDate) missingFields.push("Payroll Day Box (Month-Day-Year)");
+      if (!periodFrom) missingFields.push("Payroll Period Box (From Date)");
+      if (!periodTo) missingFields.push("Payroll Period Box (Up To Date)");
+      if (!empId) missingFields.push("Employee ID");
+      if (!pin) missingFields.push("PIN");
+
+      if (missingFields.length > 0) {
+        alert("UPLOAD CANNOT PROCEED!\n\nThe following required field(s) are missing:\n\n• " + missingFields.join("\n• "));
+        return;
+      }
 
       try {
         const empDoc = await db.collection("employees").doc(empId).get();
@@ -494,7 +685,15 @@
         if (empData.pin !== pin) return alert("AUTHORIZATION FAILED: Incorrect PIN.");
         if (empData.canOverride !== true) return alert("ACCESS DENIED: You do not have Upload/Override permissions.");
 
-        activeAuthorizedEmp = { id: empId, clientId: clientId };
+        // Store active auth along with confirmed date fields
+        activeAuthorizedEmp = { 
+          id: empId, 
+          clientId: clientId,
+          payrollDate: payrollDate,
+          periodFrom: periodFrom,
+          periodTo: periodTo
+        };
+
         document.getElementById("publicPayrollFileInput").click();
 
       } catch (err) {
@@ -532,16 +731,14 @@
             return;
           }
 
-          // DUAL RULE CHECK: Key requires BOTH A2 AND A3 to exist together
-          const batchId = `${a2.toUpperCase()}_${a3.toUpperCase()}`.replace(/[^a-zA-Z0-9]/g, '_');
+          const batchId = `${a2.toUpperCase()}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
           const batchDoc = await db.collection("payroll_batches").doc(batchId).get();
 
           pendingPayrollWorksheet = worksheet;
 
-          // IF BOTH A2 AND A3 EXACT MATCH EXISTING BATCH
           if (batchDoc.exists) {
             document.getElementById("dupClientText").innerText = a2;
-            document.getElementById("dupDateText").innerText = a3;
+            document.getElementById("dupDateText").innerText = activeAuthorizedEmp.payrollDate;
             document.getElementById("overrideEmpIdInput").value = activeAuthorizedEmp.id;
             document.getElementById("overridePinInput").value = "";
             document.getElementById("overrideAuthModal").style.display = "flex";
@@ -605,8 +802,13 @@
       const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
       const mapping = (clientObj && clientObj.mapping) ? clientObj.mapping : {};
 
+      const earningsSchema = mapping.earnings || DEFAULT_EARNINGS;
+      const deductionsSchema = mapping.deductions || DEFAULT_DEDUCTIONS;
+      const adjustmentsSchema = mapping.adjustments || DEFAULT_ADJUSTMENTS;
+      const grossPayCol = mapping.grossPayCol || "BB";
+      const netPayCol = mapping.netPayCol || "";
+
       const a2 = String(getCellValue(worksheet, "A", 2) || "").trim();
-      const a3 = String(getCellValue(worksheet, "A", 3) || "").trim();
       const range = XLSX.utils.decode_range(worksheet['!ref']);
       const totalRows = range.e.r + 1;
 
@@ -621,22 +823,43 @@
         const rawId = String(getCellValue(worksheet, "A", r) || "").trim();
         if (!rawId) continue;
 
+        const earningsItems = earningsSchema.map(item => ({
+          label: item.label,
+          unit: item.unit,
+          col: item.col,
+          val: parseExcelNum(getCellValue(worksheet, item.col, r))
+        }));
+
+        const deductionItems = deductionsSchema.map(item => ({
+          label: item.label,
+          unit: item.unit,
+          col: item.col,
+          val: parseExcelNum(getCellValue(worksheet, item.col, r))
+        }));
+
+        const adjustmentItems = adjustmentsSchema.map(item => ({
+          label: item.label,
+          unit: item.unit,
+          col: item.col,
+          val: parseExcelNum(getCellValue(worksheet, item.col, r))
+        }));
+
         const payslipPayload = {
           empId: rawId,
           empName: empName,
-          clientName: a2,
-          payrollDateStr: a3,
+          clientName: a2 || (clientObj ? clientObj.name : ""),
+          
+          payrollDateStr: activeAuthorizedEmp.payrollDate,
+          payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
+          payrollPeriodTo: activeAuthorizedEmp.periodTo,
+          payrollPeriodStr: `${activeAuthorizedEmp.periodFrom} to ${activeAuthorizedEmp.periodTo}`,
 
-          regularDays: parseExcelNum(getCellValue(worksheet, mapping.regularDaysHoursCol || "AQ", r)),
-          regularDaysAmount: parseExcelNum(getCellValue(worksheet, mapping.regularDaysAmountCol || "AS", r)),
-          regularOtHours: parseExcelNum(getCellValue(worksheet, mapping.regOtHoursCol || "AT", r)),
-          regularOtAmount: parseExcelNum(getCellValue(worksheet, mapping.regOtAmountCol || "AU", r)),
-          nightDiffHours: parseExcelNum(getCellValue(worksheet, mapping.npHoursCol || "AV", r)),
-          nightDiffAmount: parseExcelNum(getCellValue(worksheet, mapping.npAmountCol || "AW", r)),
-          regularOtNpHours: parseExcelNum(getCellValue(worksheet, mapping.regOtNpHoursCol || "AX", r)),
-          regularOtNpAmount: parseExcelNum(getCellValue(worksheet, mapping.regOtNpAmountCol || "AY", r)),
-          grossPay: parseExcelNum(getCellValue(worksheet, mapping.grossPayCol || "BB", r)),
-          netPay: parseExcelNum(getCellValue(worksheet, mapping.netPayCol, r)),
+          earningsItems: earningsItems,
+          deductionItems: deductionItems,
+          adjustmentItems: adjustmentItems,
+
+          grossPay: parseExcelNum(getCellValue(worksheet, grossPayCol, r)),
+          netPay: parseExcelNum(getCellValue(worksheet, netPayCol, r)),
 
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -655,11 +878,13 @@
       }
 
       // WRITE BATCH RECORD
-      const batchId = `${a2.toUpperCase()}_${a3.toUpperCase()}`.replace(/[^a-zA-Z0-9]/g, '_');
+      const batchId = `${a2.toUpperCase()}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
       const batchRef = db.collection("payroll_batches").doc(batchId);
       batch.set(batchRef, {
         client: a2,
-        payrollDate: a3,
+        payrollDate: activeAuthorizedEmp.payrollDate,
+        payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
+        payrollPeriodTo: activeAuthorizedEmp.periodTo,
         uploadedBy: uploaderId,
         uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
@@ -670,8 +895,8 @@
       batch.set(historyRef, {
         uploaderId: uploaderId,
         clientName: a2,
-        payrollDate: a3,
-        status: actionType, // UPLOAD or OVERRIDE
+        payrollDate: activeAuthorizedEmp.payrollDate,
+        status: actionType,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
       count++;
