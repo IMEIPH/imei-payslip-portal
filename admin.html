@@ -67,7 +67,7 @@
 
     /* PREVIEW PAYSLIP STYLES */
     .payslip-preview-card { border: 2px dashed #3182ce; padding: 20px; background: #fff; border-radius: 8px; margin-top: 15px; }
-    .payslip-header-box { border-bottom: 2px solid #2b6cb0; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }
+    .payslip-header-box { border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 15px; text-align: center; }
     .payslip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
     .payslip-table { width: 100%; border-collapse: collapse; }
     .payslip-table th { background: #edf2f7; font-size: 11px; padding: 6px; text-align: left; }
@@ -122,7 +122,7 @@
     </div>
 
     <div class="input-group">
-      <label>PAYROLL DAY (MONTH - DAY - YEAR)</label>
+      <label>PAYROLL DATE (MONTH - DAY - YEAR)</label>
       <input type="date" id="authPayrollDate">
     </div>
 
@@ -323,14 +323,25 @@
       </div>
 
       <div class="payslip-preview-card">
+        <!-- EXACT HEADER HIERARCHY MATCHING IMAGE 2 -->
         <div class="payslip-header-box">
-          <h2 id="prevClientTitle" style="margin: 0; font-size: 18px; color: #1a202c;">COMPANY NAME HERE</h2>
-          <p style="margin: 5px 0 0 0; font-size: 13px; color: #4a5568;">PAYSLIP FOR PERIOD: 01/01/2026 - 01/15/2026</p>
+          <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #1a202c; text-transform: uppercase;">
+            INT'L. MANPOWER ESSENTIALS, INC.
+          </h2>
+          <div style="font-size: 14px; font-weight: bold; color: #2b6cb0; margin-top: 4px; text-transform: uppercase;">
+            CLIENT : <span id="prevClientTitle">TECDIA CEBU INC.</span>
+          </div>
+          <div style="font-size: 13px; font-weight: bold; color: #4a5568; margin-top: 4px; text-transform: uppercase;">
+            PAYROLL : <span id="prevPayrollDateTitle">JULY 15, 2026</span>
+          </div>
+          <div style="font-size: 13px; font-weight: 500; color: #4a5568; margin-top: 2px; text-transform: uppercase;">
+            PAYROLL PERIOD: <span id="prevPayrollPeriodTitle">JUNE 26-JULY 10, 2026</span>
+          </div>
         </div>
 
         <div style="display: flex; justify-content: space-between; background: #edf2f7; padding: 10px 15px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-bottom: 15px;">
-          <div>EMPLOYEE ID: <span id="prevEmpId" style="color: #2b6cb0;">102938 (COL: F)</span></div>
-          <div>NAME: <span id="prevEmpName" style="color: #2b6cb0;">DELA CRUZ, JUAN (COL: G)</span></div>
+          <div>EMPLOYEE ID NUMBER: <span id="prevEmpId" style="color: #2b6cb0;">831016 (COL: F)</span></div>
+          <div>EMPLOYEE NAME: <span id="prevEmpName" style="color: #2b6cb0;">COLES, BENJELEN (COL: G)</span></div>
         </div>
 
         <!-- EARNINGS & HOURS (SINGLE ROW PER ITEM MATCHING IMAGE 2) -->
@@ -414,7 +425,7 @@
       
       <div class="duplicate-info-box">
         <strong>CLIENT:</strong> <span id="dupClientText">---</span><br>
-        <strong>PAYROLL DAY:</strong> <span id="dupDateText">---</span>
+        <strong>PAYROLL DATE:</strong> <span id="dupDateText">---</span>
       </div>
 
       <p style="font-size: 12px; color: #718096; margin-bottom: 10px;">To overwrite this existing record, enter an authorized Employee ID & PIN below:</p>
@@ -446,7 +457,7 @@
           <tr>
             <th>UPLOADER ID</th>
             <th>CLIENT NAME</th>
-            <th>PAYROLL DAY</th>
+            <th>PAYROLL DATE</th>
             <th>PAYROLL PERIOD</th>
             <th>ACTION STATUS</th>
             <th>DATE & TIME</th>
@@ -528,6 +539,14 @@
         binary += String.fromCharCode(bytes[i]);
       }
       return window.btoa(binary);
+    }
+
+    function formatDateDisplay(dateStr) {
+      if (!dateStr) return "---";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const options = { month: 'long', day: 'numeric', year: 'numeric' };
+      return d.toLocaleDateString('en-US', options).toUpperCase();
     }
 
     function showLandingScreen() {
@@ -822,16 +841,31 @@
       }
     }
 
-    /* --- PAYSLIP PREVIEW (IMAGE 2 LAYOUT) --- */
+    /* --- PAYSLIP PREVIEW (DYNAMIC UPLOADER METADATA) --- */
     function openPayslipPreview() {
       const client = clientsList.find(c => c.id === currentMappingClientId);
-      document.getElementById("prevClientTitle").innerText = client ? client.name : "CLIENT NAME";
+      
+      // Dynamic Client Name from mapping/dropdown selection
+      document.getElementById("prevClientTitle").innerText = client ? client.name : "TECDIA CEBU INC.";
+
+      // Dynamic Date & Period from Upload Form (if active) or Sample Preview Default
+      const pDateInput = document.getElementById("authPayrollDate").value;
+      const pFromInput = document.getElementById("authPeriodFrom").value;
+      const pToInput = document.getElementById("authPeriodTo").value;
+
+      const displayPayrollDate = pDateInput ? formatDateDisplay(pDateInput) : "JULY 15, 2026";
+      const displayPeriod = (pFromInput && pToInput) 
+        ? `${formatDateDisplay(pFromInput)} - ${formatDateDisplay(pToInput)}` 
+        : "JUNE 26 - JULY 10, 2026";
+
+      document.getElementById("prevPayrollDateTitle").innerText = displayPayrollDate;
+      document.getElementById("prevPayrollPeriodTitle").innerText = displayPeriod;
 
       const empIdCol = document.getElementById("empIdColInput").value.trim().toUpperCase() || "F";
       const empNameCol = document.getElementById("empNameColInput").value.trim().toUpperCase() || "G";
 
-      document.getElementById("prevEmpId").innerText = `102938 (COL: ${empIdCol})`;
-      document.getElementById("prevEmpName").innerText = `DELA CRUZ, JUAN (COL: ${empNameCol})`;
+      document.getElementById("prevEmpId").innerText = `831016 (COL: ${empIdCol})`;
+      document.getElementById("prevEmpName").innerText = `COLES, BENJELEN (COL: ${empNameCol})`;
 
       const earnings = extractEarningsData();
       const deductions = extractStandardData("deductionsList");
@@ -909,7 +943,7 @@
 
       let missingFields = [];
       if (!clientId) missingFields.push("Select Company / Client");
-      if (!payrollDate) missingFields.push("Payroll Day Box (Month-Day-Year)");
+      if (!payrollDate) missingFields.push("Payroll Date Box (Month-Day-Year)");
       if (!periodFrom) missingFields.push("Payroll Period Box (From Date)");
       if (!periodTo) missingFields.push("Payroll Period Box (Up To Date)");
       if (!empId) missingFields.push("Employee ID");
@@ -928,12 +962,17 @@
         if (empData.pin !== pin) return alert("AUTHORIZATION FAILED: Incorrect PIN.");
         if (empData.canOverride !== true) return alert("ACCESS DENIED: You do not have Upload/Override permissions.");
 
+        const clientObj = clientsList.find(c => c.id === clientId);
+
         activeAuthorizedEmp = { 
           id: empId, 
           clientId: clientId,
+          clientName: clientObj ? clientObj.name : "CLIENT",
           payrollDate: payrollDate,
+          payrollDateStr: formatDateDisplay(payrollDate),
           periodFrom: periodFrom,
-          periodTo: periodTo
+          periodTo: periodTo,
+          payrollPeriodStr: `${formatDateDisplay(periodFrom)} - ${formatDateDisplay(periodTo)}`
         };
 
         document.getElementById("publicPayrollFileInput").click();
@@ -980,15 +1019,14 @@
             return;
           }
 
-          const batchId = `${a2.toUpperCase()}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
+          const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
           const batchDoc = await db.collection("payroll_batches").doc(batchId).get();
 
           pendingPayrollWorksheet = worksheet;
 
           if (batchDoc.exists) {
-            const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
-            document.getElementById("dupClientText").innerText = clientObj ? clientObj.name : a2;
-            document.getElementById("dupDateText").innerText = activeAuthorizedEmp.payrollDate;
+            document.getElementById("dupClientText").innerText = activeAuthorizedEmp.clientName;
+            document.getElementById("dupDateText").innerText = activeAuthorizedEmp.payrollDateStr;
             document.getElementById("overrideEmpIdInput").value = activeAuthorizedEmp.id;
             document.getElementById("overridePinInput").value = "";
             document.getElementById("overrideAuthModal").style.display = "flex";
@@ -1051,7 +1089,6 @@
       const grossPayCol = mapping.grossPayCol || "BB";
       const netPayCol = mapping.netPayCol || "";
 
-      const a2 = String(getCellValue(worksheet, "A", 2) || "").trim();
       const range = XLSX.utils.decode_range(worksheet['!ref']);
       const totalRows = range.e.r + 1;
 
@@ -1093,12 +1130,14 @@
         const payslipPayload = {
           empId: rawId,
           empName: empName,
-          clientName: clientObj ? clientObj.name : a2,
+          agencyName: "INT'L. MANPOWER ESSENTIALS, INC.",
+          clientName: activeAuthorizedEmp.clientName,
           
-          payrollDateStr: activeAuthorizedEmp.payrollDate,
+          payrollDateRaw: activeAuthorizedEmp.payrollDate,
+          payrollDateStr: activeAuthorizedEmp.payrollDateStr,
           payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
           payrollPeriodTo: activeAuthorizedEmp.periodTo,
-          payrollPeriodStr: `${activeAuthorizedEmp.periodFrom} to ${activeAuthorizedEmp.periodTo}`,
+          payrollPeriodStr: activeAuthorizedEmp.payrollPeriodStr,
 
           earningsItems: earningsItems,
           deductionItems: deductionItems,
@@ -1124,13 +1163,12 @@
       }
 
       // WRITE BATCH RECORD
-      const batchId = `${a2.toUpperCase()}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
+      const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
       const batchRef = db.collection("payroll_batches").doc(batchId);
       batch.set(batchRef, {
-        client: clientObj ? clientObj.name : a2,
-        payrollDate: activeAuthorizedEmp.payrollDate,
-        payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
-        payrollPeriodTo: activeAuthorizedEmp.periodTo,
+        client: activeAuthorizedEmp.clientName,
+        payrollDate: activeAuthorizedEmp.payrollDateStr,
+        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
         uploadedBy: uploaderId,
         uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
@@ -1140,9 +1178,9 @@
       const historyRef = db.collection("payroll_history").doc();
       batch.set(historyRef, {
         uploaderId: uploaderId,
-        clientName: clientObj ? clientObj.name : a2,
-        payrollDate: activeAuthorizedEmp.payrollDate,
-        payrollPeriod: `${activeAuthorizedEmp.periodFrom} to ${activeAuthorizedEmp.periodTo}`,
+        clientName: activeAuthorizedEmp.clientName,
+        payrollDate: activeAuthorizedEmp.payrollDateStr,
+        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
         status: actionType,
         fileName: currentUploadFileData ? currentUploadFileData.fileName : "Payroll_Upload.xlsx",
         fileBase64: currentUploadFileData ? currentUploadFileData.fileBase64 : "",
