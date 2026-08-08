@@ -297,7 +297,7 @@
       <div class="mapping-section-header header-net">
         <span>NET TAKE HOME (STAYS AT THE BOTTOM)</span>
       </div>
-      <div class="mapping-row" style="cursor: default; background: #e6fffa;">
+      <div class="mapping-row" style="cursor: default; background: #e8f5e9;">
         <span style="width: 25px;"></span>
         <input type="text" value="NET PAY" readonly style="flex: 3.2; font-weight: bold; background: #e2e8f0; font-size: 12px;">
         <input type="text" id="netPayColInput" placeholder="AMOUNT COL (E.G. BD)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
@@ -323,7 +323,7 @@
       </div>
 
       <div class="payslip-preview-card">
-        <!-- EXACT HEADER HIERARCHY MATCHING IMAGE 2 -->
+        <!-- HEADER HIERARCHY -->
         <div class="payslip-header-box">
           <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #1a202c; text-transform: uppercase;">
             INT'L. MANPOWER ESSENTIALS, INC.
@@ -335,7 +335,7 @@
             PAYROLL : <span id="prevPayrollDateTitle">JULY 15, 2026</span>
           </div>
           <div style="font-size: 13px; font-weight: 500; color: #4a5568; margin-top: 2px; text-transform: uppercase;">
-            PAYROLL PERIOD: <span id="prevPayrollPeriodTitle">JUNE 26-JULY 10, 2026</span>
+            PAYROLL PERIOD: <span id="prevPayrollPeriodTitle">JUNE 26 - JULY 10, 2026</span>
           </div>
         </div>
 
@@ -344,7 +344,7 @@
           <div>EMPLOYEE NAME: <span id="prevEmpName" style="color: #2b6cb0;">COLES, BENJELEN (COL: G)</span></div>
         </div>
 
-        <!-- EARNINGS & HOURS (SINGLE ROW PER ITEM MATCHING IMAGE 2) -->
+        <!-- EARNINGS & HOURS -->
         <div style="margin-bottom: 20px;">
           <h4 style="margin: 0 0 8px 0; color: #1565c0; border-bottom: 2px solid #90caf9;">EARNINGS & HOURS</h4>
           <table class="payslip-table">
@@ -389,22 +389,26 @@
           </div>
         </div>
 
-        <!-- PAY SUMMARY BOX -->
+        <!-- PAY SUMMARY BOX (INCLUDES TOTAL ADJUSTMENTS) -->
         <div style="margin-top: 15px;">
           <h4 style="margin: 0 0 8px 0; color: #1b5e20; border-bottom: 2px solid #a5d6a7;">PAY SUMMARY</h4>
           <table class="payslip-table">
             <tbody>
               <tr>
                 <td><strong>TOTAL GROSS PAY</strong></td>
-                <td style="text-align: right; font-weight: bold;" id="prevGrossVal">₱ 15,450.00</td>
+                <td style="text-align: right; font-weight: bold;" id="prevGrossVal">₱ 15,450.00 (COL: BB)</td>
               </tr>
               <tr>
                 <td><strong>TOTAL DEDUCTIONS</strong></td>
                 <td style="text-align: right; font-weight: bold; color: #c53030;" id="prevDedVal">₱ 1,200.00</td>
               </tr>
+              <tr>
+                <td><strong>TOTAL ADJUSTMENTS</strong></td>
+                <td style="text-align: right; font-weight: bold; color: #6a1b9a;" id="prevAdjVal">₱ 3,000.00</td>
+              </tr>
               <tr class="payslip-total-row" style="background: #e8f5e9;">
                 <td style="font-size: 14px; color: #1b5e20;"><strong>NET TAKE HOME</strong></td>
-                <td style="text-align: right; font-size: 14px; color: #1b5e20;" id="prevNetVal">₱ 14,250.00</td>
+                <td style="text-align: right; font-size: 14px; color: #1b5e20;" id="prevNetVal">₱ 17,250.00 (COL: BD)</td>
               </tr>
             </tbody>
           </table>
@@ -841,14 +845,12 @@
       }
     }
 
-    /* --- PAYSLIP PREVIEW (DYNAMIC UPLOADER METADATA) --- */
+    /* --- PAYSLIP PREVIEW (WITH TOTAL ADJUSTMENTS IN SUMMARY) --- */
     function openPayslipPreview() {
       const client = clientsList.find(c => c.id === currentMappingClientId);
       
-      // Dynamic Client Name from mapping/dropdown selection
       document.getElementById("prevClientTitle").innerText = client ? client.name : "TECDIA CEBU INC.";
 
-      // Dynamic Date & Period from Upload Form (if active) or Sample Preview Default
       const pDateInput = document.getElementById("authPayrollDate").value;
       const pFromInput = document.getElementById("authPeriodFrom").value;
       const pToInput = document.getElementById("authPeriodTo").value;
@@ -880,7 +882,8 @@
 
       document.getElementById("prevGrossVal").innerText = `₱ 15,450.00 (COL: ${grossCol})`;
       document.getElementById("prevDedVal").innerText = `₱ 1,200.00`;
-      document.getElementById("prevNetVal").innerText = `₱ 14,250.00 (COL: ${netCol})`;
+      document.getElementById("prevAdjVal").innerText = `₱ 3,000.00`;
+      document.getElementById("prevNetVal").innerText = `₱ 17,250.00 (COL: ${netCol})`;
 
       document.getElementById("previewModal").style.display = "flex";
     }
@@ -1120,12 +1123,20 @@
           val: parseExcelNum(getCellValue(worksheet, item.col, r))
         }));
 
-        const adjustmentItems = adjustmentsSchema.map(item => ({
-          label: item.label,
-          unit: item.unit,
-          col: item.col,
-          val: parseExcelNum(getCellValue(worksheet, item.col, r))
-        }));
+        let totalAdjustmentsVal = 0;
+        const adjustmentItems = adjustmentsSchema.map(item => {
+          const val = parseExcelNum(getCellValue(worksheet, item.col, r));
+          totalAdjustmentsVal += val;
+          return {
+            label: item.label,
+            unit: item.unit,
+            col: item.col,
+            val: val
+          };
+        });
+
+        let totalDeductionsVal = 0;
+        deductionItems.forEach(d => totalDeductionsVal += d.val);
 
         const payslipPayload = {
           empId: rawId,
@@ -1144,6 +1155,8 @@
           adjustmentItems: adjustmentItems,
 
           grossPay: parseExcelNum(getCellValue(worksheet, grossPayCol, r)),
+          totalDeductions: totalDeductionsVal,
+          totalAdjustments: totalAdjustmentsVal,
           netPay: parseExcelNum(getCellValue(worksheet, netPayCol, r)),
 
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
