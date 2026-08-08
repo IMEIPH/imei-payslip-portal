@@ -203,7 +203,7 @@
       <div id="whitelistPanel" class="whitelist-panel">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <strong style="color: #276749;">WHITELIST MANAGEMENT</strong>
-          <span style="font-size: 11px; color: #4a5568;">Only whitelisted IDs are allowed to self-register</span>
+          <span style="font-size: 11px; color: #4a5568;">Only active whitelisted IDs are allowed to self-register</span>
         </div>
 
         <div class="excel-actions">
@@ -214,7 +214,7 @@
         </div>
 
         <div style="margin-top: 5px;">
-          <input type="text" id="whitelistSearchInput" placeholder="Search Whitelisted ID Number..." onkeyup="filterWhitelistTable()">
+          <input type="text" id="whitelistSearchInput" placeholder="Search Whitelisted ID Number or Name..." onkeyup="filterWhitelistTable()">
         </div>
 
         <div class="whitelist-table-container">
@@ -222,11 +222,13 @@
             <thead>
               <tr>
                 <th>WHITELISTED ID NUMBER</th>
+                <th>NAME (FAMILY, FIRST)</th>
+                <th>STATUS</th>
                 <th style="text-align: right;">ACTION</th>
               </tr>
             </thead>
             <tbody id="whitelistTableBody">
-              <tr><td colspan="2" style="text-align: center;">Loading whitelist...</td></tr>
+              <tr><td colspan="4" style="text-align: center;">Loading whitelist...</td></tr>
             </tbody>
           </table>
         </div>
@@ -787,13 +789,16 @@
       if (!tbody) return;
       tbody.innerHTML = "";
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No Whitelisted IDs found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #718096;">No Whitelisted IDs found.</td></tr>`;
         return;
       }
       list.forEach(item => {
         const tr = document.createElement("tr");
+        const statusClass = (item.status || "ACTIVE").toUpperCase() === "ACTIVE" ? "status-upload" : "status-override";
         tr.innerHTML = `
           <td><strong>${item.displayId || item.id}</strong></td>
+          <td><strong>${item.name || "---"}</strong></td>
+          <td><span class="status-badge ${statusClass}">${item.status || "ACTIVE"}</span></td>
           <td style="text-align: right;">
             <button class="btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteWhitelistId('${item.id}')">REMOVE</button>
           </td>
@@ -805,7 +810,8 @@
     function filterWhitelistTable() {
       const q = cleanEmpId(document.getElementById("whitelistSearchInput").value);
       const filtered = allWhitelistedRecords.filter(item => {
-        return cleanEmpId(item.id).includes(q) || cleanEmpId(item.displayId || '').includes(q);
+        const nameClean = (item.name || "").toUpperCase();
+        return cleanEmpId(item.id).includes(q) || cleanEmpId(item.displayId || '').includes(q) || nameClean.includes(q);
       });
       renderWhitelistTable(filtered);
     }
@@ -828,7 +834,7 @@
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
           const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-          const parsedIds = [];
+          const parsedRecords = [];
           const seenCleanedIds = new Set();
           let duplicatesFound = false;
 
@@ -836,18 +842,35 @@
             const row = rows[i];
             if (!row || row.length === 0) continue;
 
-            const rawVal = String(row[0] || "").trim();
-            if (!rawVal || rawVal.toUpperCase() === "ID" || rawVal.toUpperCase() === "EMPLOYEE ID") continue;
+            const rawId = String(row[0] || "").trim();
+            if (!rawId || rawId.toUpperCase() === "ID" || rawId.toUpperCase() === "EMPLOYEE ID") continue;
 
-            const cleaned = cleanEmpId(rawVal);
+            const cleaned = cleanEmpId(rawId);
             if (!cleaned) continue;
+
+            // Extract Name: Supports standard columns (B & C) or designated H (index 7) & I (index 8)
+            let lastName = String(row[1] || row[7] || "").trim().toUpperCase();
+            let firstName = String(row[2] || row[8] || "").trim().toUpperCase();
+            let status = String(row[3] || row[9] || "ACTIVE").trim().toUpperCase();
+
+            // ACTIVE STATUS FILTERING RULE
+            if (status && status !== "ACTIVE") continue;
+
+            let fullName = "";
+            if (lastName && firstName) {
+              fullName = `${lastName}, ${firstName}`;
+            } else if (lastName) {
+              fullName = lastName;
+            } else {
+              fullName = "---";
+            }
 
             if (seenCleanedIds.has(cleaned)) {
               duplicatesFound = true;
               break;
             }
             seenCleanedIds.add(cleaned);
-            parsedIds.push({ raw: rawVal, clean: cleaned });
+            parsedRecords.push({ raw: rawId, clean: cleaned, name: fullName, status: "ACTIVE" });
           }
 
           if (duplicatesFound) {
@@ -856,13 +879,13 @@
             return;
           }
 
-          if (parsedIds.length === 0) {
-            alert("UPLOAD REJECTED: No valid ID numbers found in Column A.");
+          if (parsedRecords.length === 0) {
+            alert("UPLOAD REJECTED: No valid Active Employee IDs found in the file.");
             fileInput.value = "";
             return;
           }
 
-          if (!confirm(`Uploading will OVERWRITE the current whitelist with ${parsedIds.length} new IDs. Do you want to proceed?`)) {
+          if (!confirm(`Uploading will OVERWRITE current whitelist with ${parsedRecords.length} ACTIVE whitelisted records. Do you want to proceed?`)) {
             fileInput.value = "";
             return;
           }
@@ -884,10 +907,12 @@
           let writeBatch = db.batch();
           let writeCount = 0;
 
-          for (const item of parsedIds) {
+          for (const item of parsedRecords) {
             const docRef = db.collection("whitelist").doc(item.clean);
             writeBatch.set(docRef, {
               displayId: item.raw,
+              name: item.name,
+              status: item.status,
               createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -900,7 +925,7 @@
           }
           if (writeCount > 0) await writeBatch.commit();
 
-          alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedIds.length} IDs uploaded.`);
+          alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedRecords.length} records uploaded.`);
           fileInput.value = "";
 
         } catch (err) {
@@ -913,10 +938,10 @@
     }
 
     async function manuallyAddWhitelist() {
-      const input = prompt("Enter Employee ID to Whitelist:");
-      if (!input) return;
+      const inputId = prompt("Enter Whitelisted Employee ID:");
+      if (!inputId) return;
 
-      const rawVal = input.trim();
+      const rawVal = inputId.trim();
       const cleaned = cleanEmpId(rawVal);
       if (!cleaned) return alert("Invalid ID number.");
 
@@ -925,12 +950,18 @@
         return alert(`REJECTED: ID Number '${rawVal}' is ALREADY present in the whitelist.`);
       }
 
+      const lastName = (prompt("Enter Family / Last Name:") || "").trim().toUpperCase();
+      const firstName = (prompt("Enter First Name:") || "").trim().toUpperCase();
+      const fullName = (lastName && firstName) ? `${lastName}, ${firstName}` : (lastName || firstName || "---");
+
       await db.collection("whitelist").doc(cleaned).set({
         displayId: rawVal,
+        name: fullName,
+        status: "ACTIVE",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      alert(`ID '${rawVal}' successfully added to whitelist!`);
+      alert(`ID '${rawVal}' (${fullName}) successfully added to active whitelist!`);
     }
 
     async function deleteWhitelistId(docId) {
@@ -941,10 +972,11 @@
 
     async function downloadWhitelistExcel() {
       try {
-        const excelData = [["WHITELISTED EMPLOYEE ID"]];
+        const excelData = [["WHITELISTED EMPLOYEE ID", "NAME (FAMILY, FIRST)", "STATUS"]];
         const snapshot = await db.collection("whitelist").get();
         snapshot.forEach(doc => {
-          excelData.push([doc.data().displayId || doc.id]);
+          const data = doc.data();
+          excelData.push([data.displayId || doc.id, data.name || "---", data.status || "ACTIVE"]);
         });
         const worksheet = XLSX.utils.aoa_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
