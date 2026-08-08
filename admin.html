@@ -259,7 +259,6 @@
       <!-- 3. DEDUCTIONS SECTION -->
       <div class="mapping-section-header header-deductions">
         <span>DEDUCTION SECTION (FOLLOWS GROSS PAY)</span>
-        <button class="btn-warning" style="padding: 4px 10px; font-size: 11px;" onclick="addMappingRow('deductionsList')">+ ADD DEDUCTION SLOT</button>
       </div>
       <div class="mapping-list" id="deductionsList"></div>
 
@@ -295,8 +294,8 @@
       <p style="font-size: 13px; color: #4a5568; margin-bottom: 5px;">A payroll record matching BOTH Client and Date already exists:</p>
       
       <div class="duplicate-info-box">
-        <strong>CLIENT (A2):</strong> <span id="dupClientText">---</span><br>
-        <strong>PAYROLL DATE (A3):</strong> <span id="dupDateText">---</span>
+        <strong>CLIENT:</strong> <span id="dupClientText">---</span><br>
+        <strong>PAYROLL DAY:</strong> <span id="dupDateText">---</span>
       </div>
 
       <p style="font-size: 12px; color: #718096; margin-bottom: 10px;">To overwrite this existing record, enter an authorized Employee ID & PIN below:</p>
@@ -317,24 +316,26 @@
     </div>
   </div>
 
-  <!-- HISTORY MODAL -->
+  <!-- UPDATED HISTORY MODAL WITH DOWNLOAD FEATURE -->
   <div id="historyModal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 980px;">
       <h3 style="margin-top: 0; color: #2d3748;">UPLOAD & OVERRIDE HISTORY LOGS</h3>
-      <p style="font-size: 12px; color: #718096;">Record of all authorized payroll uploads and overrides.</p>
+      <p style="font-size: 12px; color: #718096;">Record of all authorized payroll uploads, overrides, and downloadable source files.</p>
 
       <table>
         <thead>
           <tr>
             <th>UPLOADER ID</th>
-            <th>CLIENT (A2)</th>
-            <th>PAYROLL DATE (A3)</th>
+            <th>CLIENT NAME</th>
+            <th>PAYROLL DAY</th>
+            <th>PAYROLL PERIOD</th>
             <th>ACTION STATUS</th>
             <th>DATE & TIME</th>
+            <th style="text-align: center;">DOWNLOAD FILE</th>
           </tr>
         </thead>
         <tbody id="historyTableBody">
-          <tr><td colspan="5" style="text-align: center;">Loading history...</td></tr>
+          <tr><td colspan="7" style="text-align: center;">Loading history...</td></tr>
         </tbody>
       </table>
 
@@ -404,10 +405,21 @@
     let currentMappingClientId = null;
     let pendingPayrollWorksheet = null;
     let activeAuthorizedEmp = null;
-    let currentOverrideEmpId = null;
+    let currentUploadFileData = null; // Stores filename and Base64 content
     let allPendingRequests = [];
     let allEmployees = [];
     let draggedElement = null;
+
+    // Helper: Convert ArrayBuffer to Base64
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    }
 
     function showLandingScreen() {
       document.getElementById("landingCard").style.display = "block";
@@ -663,7 +675,7 @@
       const empId = document.getElementById("authIdInput").value.trim();
       const pin = document.getElementById("authPinInput").value.trim();
 
-      // Check which required inputs are missing
+      // Check missing inputs
       let missingFields = [];
       if (!clientId) missingFields.push("Select Company / Client");
       if (!payrollDate) missingFields.push("Payroll Day Box (Month-Day-Year)");
@@ -685,7 +697,6 @@
         if (empData.pin !== pin) return alert("AUTHORIZATION FAILED: Incorrect PIN.");
         if (empData.canOverride !== true) return alert("ACCESS DENIED: You do not have Upload/Override permissions.");
 
-        // Store active auth along with confirmed date fields
         activeAuthorizedEmp = { 
           id: empId, 
           clientId: clientId,
@@ -709,7 +720,15 @@
       const reader = new FileReader();
       reader.onload = async function (e) {
         try {
-          const data = new Uint8Array(e.target.result);
+          const arrayBuffer = e.target.result;
+          
+          // Store filename and Base64 content for history downloading
+          currentUploadFileData = {
+            fileName: file.name,
+            fileBase64: arrayBufferToBase64(arrayBuffer)
+          };
+
+          const data = new Uint8Array(arrayBuffer);
           const workbook = XLSX.read(data, { type: 'array', raw: false });
 
           if (!workbook.SheetNames.includes("PAYROLL")) {
@@ -737,7 +756,8 @@
           pendingPayrollWorksheet = worksheet;
 
           if (batchDoc.exists) {
-            document.getElementById("dupClientText").innerText = a2;
+            const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
+            document.getElementById("dupClientText").innerText = clientObj ? clientObj.name : a2;
             document.getElementById("dupDateText").innerText = activeAuthorizedEmp.payrollDate;
             document.getElementById("overrideEmpIdInput").value = activeAuthorizedEmp.id;
             document.getElementById("overridePinInput").value = "";
@@ -758,6 +778,7 @@
 
     function cancelOverrideUpload() {
       pendingPayrollWorksheet = null;
+      currentUploadFileData = null;
       document.getElementById("overrideAuthModal").style.display = "none";
       document.getElementById("publicPayrollFileInput").value = "";
     }
@@ -847,7 +868,7 @@
         const payslipPayload = {
           empId: rawId,
           empName: empName,
-          clientName: a2 || (clientObj ? clientObj.name : ""),
+          clientName: clientObj ? clientObj.name : a2,
           
           payrollDateStr: activeAuthorizedEmp.payrollDate,
           payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
@@ -881,7 +902,7 @@
       const batchId = `${a2.toUpperCase()}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
       const batchRef = db.collection("payroll_batches").doc(batchId);
       batch.set(batchRef, {
-        client: a2,
+        client: clientObj ? clientObj.name : a2,
         payrollDate: activeAuthorizedEmp.payrollDate,
         payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
         payrollPeriodTo: activeAuthorizedEmp.periodTo,
@@ -890,13 +911,16 @@
       }, { merge: true });
       count++;
 
-      // LOG HISTORY ENTRY
+      // LOG HISTORY ENTRY WITH CLEAN FIELDMAPPING & FILE DATA
       const historyRef = db.collection("payroll_history").doc();
       batch.set(historyRef, {
         uploaderId: uploaderId,
-        clientName: a2,
+        clientName: clientObj ? clientObj.name : a2,
         payrollDate: activeAuthorizedEmp.payrollDate,
+        payrollPeriod: `${activeAuthorizedEmp.periodFrom} to ${activeAuthorizedEmp.periodTo}`,
         status: actionType,
+        fileName: currentUploadFileData ? currentUploadFileData.fileName : "Payroll_Upload.xlsx",
+        fileBase64: currentUploadFileData ? currentUploadFileData.fileBase64 : "",
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
       count++;
@@ -905,10 +929,11 @@
 
       alert(`SUCCESS: Processed and saved ${totalUploaded} employee payslips.\nAction recorded as [${actionType}].`);
       document.getElementById("publicPayrollFileInput").value = "";
+      currentUploadFileData = null;
       showLandingScreen();
     }
 
-    // HISTORY MODAL FUNCTIONS
+    /* --- HISTORY MODAL & DOWNLOAD FUNCTIONS --- */
     function openHistoryModal() {
       document.getElementById("historyModal").style.display = "flex";
       loadHistoryLogs();
@@ -920,7 +945,7 @@
 
     function loadHistoryLogs() {
       const tbody = document.getElementById("historyTableBody");
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Loading history...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Loading history...</td></tr>`;
 
       db.collection("payroll_history")
         .orderBy("timestamp", "desc")
@@ -928,7 +953,7 @@
         .then(snapshot => {
           tbody.innerHTML = "";
           if (snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #718096;">No history recorded yet.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #718096;">No history recorded yet.</td></tr>`;
             return;
           }
 
@@ -936,21 +961,56 @@
             const data = doc.data();
             const dateStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : "N/A";
             const badgeClass = data.status === "OVERRIDE" ? "status-override" : "status-upload";
+            const displayStatus = data.status === "OVERRIDE" ? "OVERRIDDEN" : "UPLOADED";
+
+            const downloadBtn = data.fileBase64 
+              ? `<button class="btn-success" style="padding: 4px 10px; font-size: 11px;" onclick="downloadHistoryFile('${doc.id}')">DOWNLOAD</button>` 
+              : `<span style="color: #a0aec0; font-size: 11px;">N/A</span>`;
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
               <td><strong>${data.uploaderId || "---"}</strong></td>
               <td>${data.clientName || "---"}</td>
               <td>${data.payrollDate || "---"}</td>
-              <td><span class="status-badge ${badgeClass}">${data.status}</span></td>
+              <td>${data.payrollPeriod || "---"}</td>
+              <td><span class="status-badge ${badgeClass}">${displayStatus}</span></td>
               <td>${dateStr}</td>
+              <td style="text-align: center;">${downloadBtn}</td>
             `;
             tbody.appendChild(tr);
           });
         })
         .catch(err => {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Error: ${err.message}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Error loading history: ${err.message}</td></tr>`;
         });
+    }
+
+    async function downloadHistoryFile(docId) {
+      try {
+        const doc = await db.collection("payroll_history").doc(docId).get();
+        if (!doc.exists) return alert("File record not found.");
+        
+        const data = doc.data();
+        if (!data.fileBase64) return alert("No download file attached to this log entry.");
+
+        const byteCharacters = atob(data.fileBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = data.fileName || `Payroll_${data.clientName || 'Export'}_${data.payrollDate || 'Date'}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      } catch (err) {
+        alert("Error downloading file: " + err.message);
+      }
     }
 
     function triggerExcelUpload() { document.getElementById("excelFileInput").click(); }
