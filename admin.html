@@ -270,12 +270,12 @@
 
       <!-- 2. GROSS PAY -->
       <div class="mapping-section-header header-gross">
-        <span>GROSS PAY (STAYS AFTER EARNINGS)</span>
+        <span>GROSS PAY</span>
       </div>
-      <div class="mapping-row" style="cursor: default; background: #ebf8ff;">
+      <div class="mapping-row" style="cursor: default; background: #ebf8ff; margin-bottom: 15px;">
         <span style="width: 25px;"></span>
-        <input type="text" value="GROSS PAY" readonly style="flex: 3.2; font-weight: bold; background: #e2e8f0; font-size: 12px;">
-        <input type="text" id="grossPayColInput" placeholder="AMOUNT COL (E.G. BB)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <input type="text" value="TOTAL GROSS PAY" readonly style="flex: 3.2; font-weight: bold; background: #e2e8f0; font-size: 12px;">
+        <input type="text" id="grossPayColInput" placeholder="EXCEL COL (E.G. BB)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
         <span style="width: 38px;"></span>
       </div>
 
@@ -286,6 +286,14 @@
       </div>
       <div class="mapping-list" id="deductionsList"></div>
 
+      <!-- TOTAL DEDUCTIONS COLUMN MAPPING -->
+      <div class="mapping-row" style="cursor: default; background: #fff3e0; margin-bottom: 15px;">
+        <span style="width: 25px;"></span>
+        <input type="text" value="TOTAL DEDUCTIONS" readonly style="flex: 3.2; font-weight: bold; background: #ffe0b2; font-size: 12px; color: #e65100;">
+        <input type="text" id="totalDeductionsColInput" placeholder="EXCEL COL" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <span style="width: 38px;"></span>
+      </div>
+
       <!-- 4. ADJUSTMENTS SECTION -->
       <div class="mapping-section-header header-adjustments">
         <span>ADJUSTMENTS SECTION</span>
@@ -293,14 +301,22 @@
       </div>
       <div class="mapping-list" id="adjustmentsList"></div>
 
+      <!-- TOTAL ADJUSTMENTS COLUMN MAPPING -->
+      <div class="mapping-row" style="cursor: default; background: #f3e5f5; margin-bottom: 15px;">
+        <span style="width: 25px;"></span>
+        <input type="text" value="TOTAL ADJUSTMENTS" readonly style="flex: 3.2; font-weight: bold; background: #e1bee7; font-size: 12px; color: #6a1b9a;">
+        <input type="text" id="totalAdjustmentsColInput" placeholder="EXCEL COL" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <span style="width: 38px;"></span>
+      </div>
+
       <!-- 5. NET TAKE HOME -->
       <div class="mapping-section-header header-net">
-        <span>NET TAKE HOME (STAYS AT THE BOTTOM)</span>
+        <span>NET TAKE HOME</span>
       </div>
       <div class="mapping-row" style="cursor: default; background: #e8f5e9;">
         <span style="width: 25px;"></span>
-        <input type="text" value="NET PAY" readonly style="flex: 3.2; font-weight: bold; background: #e2e8f0; font-size: 12px;">
-        <input type="text" id="netPayColInput" placeholder="AMOUNT COL (E.G. BD)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
+        <input type="text" value="NET PAY" readonly style="flex: 3.2; font-weight: bold; background: #c8e6c9; font-size: 12px; color: #1b5e20;">
+        <input type="text" id="netPayColInput" placeholder="EXCEL COL (E.G. BD)" style="flex: 1; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
         <span style="width: 38px;"></span>
       </div>
 
@@ -389,26 +405,26 @@
           </div>
         </div>
 
-        <!-- PAY SUMMARY BOX (INCLUDES TOTAL ADJUSTMENTS) -->
+        <!-- PAY SUMMARY BOX -->
         <div style="margin-top: 15px;">
           <h4 style="margin: 0 0 8px 0; color: #1b5e20; border-bottom: 2px solid #a5d6a7;">PAY SUMMARY</h4>
           <table class="payslip-table">
             <tbody>
               <tr>
                 <td><strong>TOTAL GROSS PAY</strong></td>
-                <td style="text-align: right; font-weight: bold;" id="prevGrossVal">₱ 15,450.00 (COL: BB)</td>
+                <td style="text-align: right; font-weight: bold;" id="prevGrossVal">15,450.00 (COL: BB)</td>
               </tr>
               <tr>
                 <td><strong>TOTAL DEDUCTIONS</strong></td>
-                <td style="text-align: right; font-weight: bold; color: #c53030;" id="prevDedVal">₱ 1,200.00</td>
+                <td style="text-align: right; font-weight: bold; color: #c53030;" id="prevDedVal">1,200.00</td>
               </tr>
               <tr>
                 <td><strong>TOTAL ADJUSTMENTS</strong></td>
-                <td style="text-align: right; font-weight: bold; color: #6a1b9a;" id="prevAdjVal">₱ 3,000.00</td>
+                <td style="text-align: right; font-weight: bold; color: #6a1b9a;" id="prevAdjVal">3,000.00</td>
               </tr>
               <tr class="payslip-total-row" style="background: #e8f5e9;">
                 <td style="font-size: 14px; color: #1b5e20;"><strong>NET TAKE HOME</strong></td>
-                <td style="text-align: right; font-size: 14px; color: #1b5e20;" id="prevNetVal">₱ 17,250.00 (COL: BD)</td>
+                <td style="text-align: right; font-size: 14px; color: #1b5e20;" id="prevNetVal">17,250.00 (COL: BD)</td>
               </tr>
             </tbody>
           </table>
@@ -494,7 +510,6 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    // DEFAULT PAIRED EARNINGS PRESET
     const DEFAULT_EARNINGS = [
       { label: "REGULAR DAYS", unit: "DAYS", qtyCol: "AQ", amtCol: "AS" },
       { label: "REGULAR OT", unit: "HOURS", qtyCol: "AT", amtCol: "AU" },
@@ -687,7 +702,9 @@
       renderStandardSection("adjustmentsList", adjustments);
 
       document.getElementById("grossPayColInput").value = mapping.grossPayCol || "BB";
-      document.getElementById("netPayColInput").value = mapping.netPayCol || "";
+      document.getElementById("totalDeductionsColInput").value = mapping.totalDeductionsCol || "";
+      document.getElementById("totalAdjustmentsColInput").value = mapping.totalAdjustmentsCol || "";
+      document.getElementById("netPayColInput").value = mapping.netPayCol || "BD";
 
       document.getElementById("mappingModal").style.display = "flex";
     }
@@ -831,7 +848,9 @@
         earnings: extractEarningsData(),
         grossPayCol: document.getElementById("grossPayColInput").value.trim().toUpperCase(),
         deductions: extractStandardData("deductionsList"),
+        totalDeductionsCol: document.getElementById("totalDeductionsColInput").value.trim().toUpperCase(),
         adjustments: extractStandardData("adjustmentsList"),
+        totalAdjustmentsCol: document.getElementById("totalAdjustmentsColInput").value.trim().toUpperCase(),
         netPayCol: document.getElementById("netPayColInput").value.trim().toUpperCase(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
@@ -845,7 +864,7 @@
       }
     }
 
-    /* --- PAYSLIP PREVIEW (WITH TOTAL ADJUSTMENTS IN SUMMARY) --- */
+    /* --- PAYSLIP PREVIEW (NUMBERS ONLY / NO PESO SIGN) --- */
     function openPayslipPreview() {
       const client = clientsList.find(c => c.id === currentMappingClientId);
       
@@ -878,12 +897,14 @@
       renderStandardPreview("prevAdjustmentsBody", adjustments);
 
       const grossCol = document.getElementById("grossPayColInput").value.trim().toUpperCase() || "BB";
+      const totalDedCol = document.getElementById("totalDeductionsColInput").value.trim().toUpperCase();
+      const totalAdjCol = document.getElementById("totalAdjustmentsColInput").value.trim().toUpperCase();
       const netCol = document.getElementById("netPayColInput").value.trim().toUpperCase() || "BD";
 
-      document.getElementById("prevGrossVal").innerText = `₱ 15,450.00 (COL: ${grossCol})`;
-      document.getElementById("prevDedVal").innerText = `₱ 1,200.00`;
-      document.getElementById("prevAdjVal").innerText = `₱ 3,000.00`;
-      document.getElementById("prevNetVal").innerText = `₱ 17,250.00 (COL: ${netCol})`;
+      document.getElementById("prevGrossVal").innerText = `15,450.00 (COL: ${grossCol})`;
+      document.getElementById("prevDedVal").innerText = totalDedCol ? `1,200.00 (COL: ${totalDedCol})` : `1,200.00`;
+      document.getElementById("prevAdjVal").innerText = totalAdjCol ? `3,000.00 (COL: ${totalAdjCol})` : `3,000.00`;
+      document.getElementById("prevNetVal").innerText = `17,250.00 (COL: ${netCol})`;
 
       document.getElementById("previewModal").style.display = "flex";
     }
@@ -905,7 +926,7 @@
             11.00 <span style="font-size: 10px; color: #2b6cb0;">${qtyColStr}</span>
           </td>
           <td style="text-align: right; font-weight: bold;">
-            ₱ 540.00 <span style="font-size: 10px; color: #2b6cb0;">${amtColStr}</span>
+            540.00 <span style="font-size: 10px; color: #2b6cb0;">${amtColStr}</span>
           </td>
         `;
         tbody.appendChild(tr);
@@ -921,10 +942,11 @@
       }
       items.forEach(item => {
         const tr = document.createElement("tr");
+        const colStr = item.col ? `(${item.col})` : '';
         tr.innerHTML = `
           <td><strong>${item.label || "---"}</strong></td>
           <td style="text-align: right; font-weight: bold;">
-            ₱ 1,500.00 <span style="font-size: 10px; color: #2b6cb0;">(${item.col})</span>
+            1,500.00 <span style="font-size: 10px; color: #2b6cb0;">${colStr}</span>
           </td>
         `;
         tbody.appendChild(tr);
@@ -1088,9 +1110,11 @@
       const empNameCol = mapping.empNameCol || "G";
       const earningsSchema = mapping.earnings || DEFAULT_EARNINGS;
       const deductionsSchema = mapping.deductions || DEFAULT_DEDUCTIONS;
+      const totalDeductionsCol = mapping.totalDeductionsCol || "";
       const adjustmentsSchema = mapping.adjustments || DEFAULT_ADJUSTMENTS;
+      const totalAdjustmentsCol = mapping.totalAdjustmentsCol || "";
       const grossPayCol = mapping.grossPayCol || "BB";
-      const netPayCol = mapping.netPayCol || "";
+      const netPayCol = mapping.netPayCol || "BD";
 
       const range = XLSX.utils.decode_range(worksheet['!ref']);
       const totalRows = range.e.r + 1;
@@ -1106,7 +1130,6 @@
         const rawId = String(getCellValue(worksheet, empIdCol, r) || getCellValue(worksheet, "F", r) || getCellValue(worksheet, "A", r) || "").trim();
         if (!rawId) continue;
 
-        // PAIRED EARNINGS PARSING
         const earningsItems = earningsSchema.map(item => ({
           label: item.label,
           unit: item.unit,
@@ -1123,10 +1146,14 @@
           val: parseExcelNum(getCellValue(worksheet, item.col, r))
         }));
 
-        let totalAdjustmentsVal = 0;
+        let calculatedDeductions = 0;
+        deductionItems.forEach(d => calculatedDeductions += d.val);
+        const finalTotalDeductions = totalDeductionsCol ? parseExcelNum(getCellValue(worksheet, totalDeductionsCol, r)) : calculatedDeductions;
+
+        let calculatedAdjustments = 0;
         const adjustmentItems = adjustmentsSchema.map(item => {
           const val = parseExcelNum(getCellValue(worksheet, item.col, r));
-          totalAdjustmentsVal += val;
+          calculatedAdjustments += val;
           return {
             label: item.label,
             unit: item.unit,
@@ -1134,9 +1161,7 @@
             val: val
           };
         });
-
-        let totalDeductionsVal = 0;
-        deductionItems.forEach(d => totalDeductionsVal += d.val);
+        const finalTotalAdjustments = totalAdjustmentsCol ? parseExcelNum(getCellValue(worksheet, totalAdjustmentsCol, r)) : calculatedAdjustments;
 
         const payslipPayload = {
           empId: rawId,
@@ -1155,8 +1180,8 @@
           adjustmentItems: adjustmentItems,
 
           grossPay: parseExcelNum(getCellValue(worksheet, grossPayCol, r)),
-          totalDeductions: totalDeductionsVal,
-          totalAdjustments: totalAdjustmentsVal,
+          totalDeductions: finalTotalDeductions,
+          totalAdjustments: finalTotalAdjustments,
           netPay: parseExcelNum(getCellValue(worksheet, netPayCol, r)),
 
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
