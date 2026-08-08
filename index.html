@@ -154,6 +154,43 @@
     .highlight-row { background: #ebf8ff; font-weight: bold; color: #2b6cb0; }
     .net-pay-row { background: #c6f6d5; font-weight: bold; color: #22543d; font-size: 15px; }
 
+    /* ACTION BUTTONS (SAVE & PRINT) */
+    .payslip-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .btn-save {
+      flex: 1;
+      padding: 12px;
+      background: #2b6cb0;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .btn-save:hover { background: #2c5282; }
+    .btn-print {
+      flex: 1;
+      padding: 12px;
+      background: #4a5568;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .btn-print:hover { background: #2d3748; }
+
     .error-msg { color: #e53e3e; font-weight: bold; text-align: center; margin-top: 15px; display: none; font-size: 14px; }
 
     /* MODAL STYLES FOR REGISTER ID */
@@ -163,9 +200,20 @@
     .modal-header h3 { margin: 0; color: #2d3748; }
     .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #a0aec0; }
     .close-btn:hover { color: #2d3748; }
+
+    /* PRINT MEDIA STYLES */
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      .portal-header, .login-section, .payslip-actions, .modal-overlay { display: none !important; }
+      .payslip-box { display: block !important; border: none; padding: 0; margin-top: 0; }
+    }
   </style>
+
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <!-- HTML2PDF LIBRARY FOR PDF GENERATION -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -215,101 +263,109 @@
 
     <!-- PAYSLIP DISPLAY CONTAINER -->
     <div id="payslipBox" class="payslip-box">
-      <div class="payslip-title">
-        <h2 id="pA1">---</h2>
-        <h3 id="pA2">---</h3>
-        <p id="pA3">---</p>
-        <p id="pA4">---</p>
+      <div id="payslipPrintableArea">
+        <div class="payslip-title">
+          <h2 id="pA1">---</h2>
+          <h3 id="pA2">---</h3>
+          <p id="pA3">---</p>
+          <p id="pA4">---</p>
+        </div>
+
+        <div class="employee-info">
+          <div class="info-row">
+            <strong>EMPLOYEE ID NUMBER:</strong>
+            <span id="pF">---</span>
+          </div>
+          <div class="info-row">
+            <strong>EMPLOYEE NAME:</strong>
+            <span id="pG">---</span>
+          </div>
+        </div>
+
+        <!-- EARNINGS & HOURS SECTION -->
+        <div class="section-header">EARNINGS & HOURS</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-left" style="width: 50%;">TYPE</th>
+              <th class="text-center" style="width: 25%;">HOURS / DAYS</th>
+              <th class="amount" style="width: 25%;">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAS">0.00</td></tr>
+            <tr><td class="text-left">REG OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
+            <tr><td class="text-left">NP</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
+            <tr><td class="text-left">REG OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY PAY</td><td class="text-center" id="pBD">0</td><td class="amount" id="pBE">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY DUTY</td><td class="text-center" id="pBF">0</td><td class="amount" id="pBG">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY OT</td><td class="text-center" id="pBH">0</td><td class="amount" id="pBI">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY NP</td><td class="text-center" id="pBJ">0</td><td class="amount" id="pBK">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY DUTY</td><td class="text-center" id="pBL">0</td><td class="amount" id="pBM">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY OT</td><td class="text-center" id="pBN">0</td><td class="amount" id="pBO">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY NP</td><td class="text-center" id="pBP">0</td><td class="amount" id="pBQ">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY OT NP</td><td class="text-center" id="pBR">0</td><td class="amount" id="pBS">0.00</td></tr>
+            <tr><td class="text-left">REST DAY</td><td class="text-center" id="pBV">0</td><td class="amount" id="pBW">0.00</td></tr>
+            <tr><td class="text-left">REST DAY OT</td><td class="text-center" id="pBX">0</td><td class="amount" id="pBY">0.00</td></tr>
+            <tr><td class="text-left">REST DAY NP</td><td class="text-center" id="pBZ">0</td><td class="amount" id="pCA">0.00</td></tr>
+            <tr><td class="text-left">REST DAY NP OT</td><td class="text-center" id="pCB">0</td><td class="amount" id="pCC">0.00</td></tr>
+            <tr><td class="text-left">LEAVE WITH PAY</td><td class="text-center" id="pCT">0</td><td class="amount" id="pCU">0.00</td></tr>
+            <tr class="highlight-row">
+              <td colspan="2" class="text-left">GROSS PAY</td>
+              <td class="amount" id="pCX">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- DEDUCTIONS SECTION -->
+        <div class="section-header">DEDUCTIONS</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-left" style="width: 75%;">DEDUCTION ITEM</th>
+              <th class="amount" style="width: 25%;">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="text-left">WELFARE</td><td class="amount" id="pDA">0.00</td></tr>
+            <tr><td class="text-left">HEALTH INSURANCE</td><td class="amount" id="pDB">0.00</td></tr>
+            <tr><td class="text-left">INSURANCE CARD</td><td class="amount" id="pDC">0.00</td></tr>
+            <tr><td class="text-left">MISC.</td><td class="amount" id="pDD">0.00</td></tr>
+            <tr><td class="text-left">MEDICAL</td><td class="amount" id="pDE">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 1</td><td class="amount" id="pDF">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 2</td><td class="amount" id="pDG">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 3</td><td class="amount" id="pDR">0.00</td></tr>
+            <tr><td class="text-left">SSS LOAN</td><td class="amount" id="pDH">0.00</td></tr>
+            <tr><td class="text-left">SSS CALAMITY LOAN</td><td class="amount" id="pDI">0.00</td></tr>
+            <tr><td class="text-left">HDMF LOAN</td><td class="amount" id="pDJ">0.00</td></tr>
+            <tr><td class="text-left">HDMF CALAMITY LOAN</td><td class="amount" id="pDK">0.00</td></tr>
+            <tr class="highlight-row">
+              <td class="text-left">TOTAL DEDUCTIONS</td>
+              <td class="amount" id="pDO">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- ADJUSTMENTS & NET TAKE HOME SECTION -->
+        <div class="section-header">ADJUSTMENTS & NET TAKE HOME</div>
+        <table class="table">
+          <tbody>
+            <tr><td class="text-left" style="width: 75%;">PAYROLL ADJUSTMENT 1</td><td class="amount" style="width: 25%;" id="pDP">0.00</td></tr>
+            <tr><td class="text-left">PAYROLL ADJUSTMENT 2</td><td class="amount" id="pDQ">0.00</td></tr>
+            <tr><td class="text-left">REFUND SALARY</td><td class="amount" id="pDT">0.00</td></tr>
+            <tr class="net-pay-row">
+              <td class="text-left">NET PAY</td>
+              <td class="amount" id="pDV">0.00</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <div class="employee-info">
-        <div class="info-row">
-          <strong>EMPLOYEE ID NUMBER:</strong>
-          <span id="pF">---</span>
-        </div>
-        <div class="info-row">
-          <strong>EMPLOYEE NAME:</strong>
-          <span id="pG">---</span>
-        </div>
+      <!-- BOTTOM ACTION BUTTONS -->
+      <div class="payslip-actions">
+        <button class="btn-save" onclick="savePayslipPDF()">SAVE AS PDF</button>
+        <button class="btn-print" onclick="printPayslip()">PRINT PAYSLIP</button>
       </div>
-
-      <!-- EARNINGS & HOURS SECTION -->
-      <div class="section-header">EARNINGS & HOURS</div>
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="text-left" style="width: 50%;">TYPE</th>
-            <th class="text-center" style="width: 25%;">HOURS / DAYS</th>
-            <th class="amount" style="width: 25%;">AMOUNT</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAS">0.00</td></tr>
-          <tr><td class="text-left">REG OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
-          <tr><td class="text-left">NP</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
-          <tr><td class="text-left">REG OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
-          <tr><td class="text-left">REGULAR HOLIDAY PAY</td><td class="text-center" id="pBD">0</td><td class="amount" id="pBE">0.00</td></tr>
-          <tr><td class="text-left">REGULAR HOLIDAY DUTY</td><td class="text-center" id="pBF">0</td><td class="amount" id="pBG">0.00</td></tr>
-          <tr><td class="text-left">REGULAR HOLIDAY OT</td><td class="text-center" id="pBH">0</td><td class="amount" id="pBI">0.00</td></tr>
-          <tr><td class="text-left">REGULAR HOLIDAY NP</td><td class="text-center" id="pBJ">0</td><td class="amount" id="pBK">0.00</td></tr>
-          <tr><td class="text-left">SPECIAL HOLIDAY DUTY</td><td class="text-center" id="pBL">0</td><td class="amount" id="pBM">0.00</td></tr>
-          <tr><td class="text-left">SPECIAL HOLIDAY OT</td><td class="text-center" id="pBN">0</td><td class="amount" id="pBO">0.00</td></tr>
-          <tr><td class="text-left">SPECIAL HOLIDAY NP</td><td class="text-center" id="pBP">0</td><td class="amount" id="pBQ">0.00</td></tr>
-          <tr><td class="text-left">SPECIAL HOLIDAY OT NP</td><td class="text-center" id="pBR">0</td><td class="amount" id="pBS">0.00</td></tr>
-          <tr><td class="text-left">REST DAY</td><td class="text-center" id="pBV">0</td><td class="amount" id="pBW">0.00</td></tr>
-          <tr><td class="text-left">REST DAY OT</td><td class="text-center" id="pBX">0</td><td class="amount" id="pBY">0.00</td></tr>
-          <tr><td class="text-left">REST DAY NP</td><td class="text-center" id="pBZ">0</td><td class="amount" id="pCA">0.00</td></tr>
-          <tr><td class="text-left">REST DAY NP OT</td><td class="text-center" id="pCB">0</td><td class="amount" id="pCC">0.00</td></tr>
-          <tr><td class="text-left">LEAVE WITH PAY</td><td class="text-center" id="pCT">0</td><td class="amount" id="pCU">0.00</td></tr>
-          <tr class="highlight-row">
-            <td colspan="2" class="text-left">GROSS PAY</td>
-            <td class="amount" id="pCX">0.00</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- DEDUCTIONS SECTION -->
-      <div class="section-header">DEDUCTIONS</div>
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="text-left" style="width: 75%;">DEDUCTION ITEM</th>
-            <th class="amount" style="width: 25%;">AMOUNT</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td class="text-left">WELFARE</td><td class="amount" id="pDA">0.00</td></tr>
-          <tr><td class="text-left">HEALTH INSURANCE</td><td class="amount" id="pDB">0.00</td></tr>
-          <tr><td class="text-left">INSURANCE CARD</td><td class="amount" id="pDC">0.00</td></tr>
-          <tr><td class="text-left">MISC.</td><td class="amount" id="pDD">0.00</td></tr>
-          <tr><td class="text-left">MEDICAL</td><td class="amount" id="pDE">0.00</td></tr>
-          <tr><td class="text-left">SALARY LOAN 1</td><td class="amount" id="pDF">0.00</td></tr>
-          <tr><td class="text-left">SALARY LOAN 2</td><td class="amount" id="pDG">0.00</td></tr>
-          <tr><td class="text-left">SALARY LOAN 3</td><td class="amount" id="pDR">0.00</td></tr>
-          <tr><td class="text-left">SSS LOAN</td><td class="amount" id="pDH">0.00</td></tr>
-          <tr><td class="text-left">SSS CALAMITY LOAN</td><td class="amount" id="pDI">0.00</td></tr>
-          <tr><td class="text-left">HDMF LOAN</td><td class="amount" id="pDJ">0.00</td></tr>
-          <tr><td class="text-left">HDMF CALAMITY LOAN</td><td class="amount" id="pDK">0.00</td></tr>
-          <tr class="highlight-row">
-            <td class="text-left">TOTAL DEDUCTIONS</td>
-            <td class="amount" id="pDO">0.00</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- ADJUSTMENTS & NET TAKE HOME SECTION -->
-      <div class="section-header">ADJUSTMENTS & NET TAKE HOME</div>
-      <table class="table">
-        <tbody>
-          <tr><td class="text-left" style="width: 75%;">PAYROLL ADJUSTMENT 1</td><td class="amount" style="width: 25%;" id="pDP">0.00</td></tr>
-          <tr><td class="text-left">PAYROLL ADJUSTMENT 2</td><td class="amount" id="pDQ">0.00</td></tr>
-          <tr><td class="text-left">REFUND SALARY</td><td class="amount" id="pDT">0.00</td></tr>
-          <tr class="net-pay-row">
-            <td class="text-left">NET PAY</td>
-            <td class="amount" id="pDV">0.00</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   </div>
 
@@ -623,6 +679,38 @@
         errorMsg.innerText = "ERROR LOADING PAYSLIP: " + err.message;
         errorMsg.style.display = "block";
       }
+    }
+
+    /* SAVE PAYSLIP AS PDF */
+    function savePayslipPDF() {
+      const element = document.getElementById("payslipPrintableArea");
+      
+      const empId = document.getElementById("pF").innerText.trim() || "EMPLOYEE";
+      const clientName = document.getElementById("pA2").innerText.trim() || "CLIENT";
+      const payrollDate = document.getElementById("pA3").innerText.trim() || "DATE";
+
+      // Clean string values from special characters that are invalid in file names
+      const cleanEmpId = empId.replace(/[^a-zA-Z0-9_-]/g, '');
+      const cleanClient = clientName.replace(/[^a-zA-Z0-9_-]/g, ' ');
+      const cleanDate = payrollDate.replace(/[^a-zA-Z0-9_-]/g, ' ');
+
+      // Format: IMEI-Client Name-Payroll Date
+      const fileName = `${cleanEmpId}-${cleanClient}-${cleanDate}.pdf`.replace(/\s+/g, ' ');
+
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+
+    /* PRINT PAYSLIP */
+    function printPayslip() {
+      window.print();
     }
   </script>
 </body>
