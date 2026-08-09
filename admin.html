@@ -836,7 +836,6 @@
             const cleaned = cleanEmpId(rawVal);
             if (!cleaned) continue;
 
-            // Check for internal duplicate inside uploaded file
             if (seenCleanedIds.has(cleaned)) {
               duplicatesFound = true;
               break;
@@ -862,7 +861,6 @@
             return;
           }
 
-          // Step 1: Wipe all old whitelist documents
           const existingSnapshot = await db.collection("whitelist").get();
           let deleteBatch = db.batch();
           let delCount = 0;
@@ -877,7 +875,6 @@
           });
           if (delCount > 0) await deleteBatch.commit();
 
-          // Step 2: Save new whitelist IDs
           let writeBatch = db.batch();
           let writeCount = 0;
 
@@ -1288,22 +1285,28 @@
       reader.onload = async function (e) {
         try {
           const arrayBuffer = e.target.result;
-          
-          currentUploadFileData = {
-            fileName: file.name,
-            fileBase64: arrayBufferToBase64(arrayBuffer)
-          };
-
           const data = new Uint8Array(arrayBuffer);
           const workbook = XLSX.read(data, { type: 'array', raw: false });
 
-          if (!workbook.SheetNames.includes("PAYROLL")) {
-            alert("SECURITY REJECTED: Worksheet named 'PAYROLL' not found in file.");
+          // Requirement 1: Accept only if there is Payroll or payroll (case-insensitive)
+          const payrollSheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === "payroll");
+          if (!payrollSheetName) {
+            alert("SECURITY REJECTED: Worksheet named 'Payroll' (case-insensitive) not found in file.");
             fileInput.value = "";
             return;
           }
 
-          const worksheet = workbook.Sheets["PAYROLL"];
+          const worksheet = workbook.Sheets[payrollSheetName];
+
+          // Requirement 3: History download feature of the uploaded file that will be the payroll sheet only
+          const singleSheetWb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(singleSheetWb, worksheet, payrollSheetName);
+          const singleSheetWbOut = XLSX.write(singleSheetWb, { bookType: 'xlsx', type: 'array' });
+
+          currentUploadFileData = {
+            fileName: file.name,
+            fileBase64: arrayBufferToBase64(singleSheetWbOut)
+          };
 
           const a1 = String(getCellValue(worksheet, "A", 1) || "").trim();
           const a2 = String(getCellValue(worksheet, "A", 2) || "").trim();
