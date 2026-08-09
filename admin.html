@@ -493,9 +493,9 @@
 
   <!-- HISTORY MODAL -->
   <div id="historyModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 900px;">
+    <div class="modal-content" style="max-width: 980px;">
       <h3 style="margin-top: 0; color: #2d3748;">UPLOAD & OVERRIDE HISTORY LOGS</h3>
-      <p style="font-size: 12px; color: #718096;">Record of all authorized payroll uploads and overrides.</p>
+      <p style="font-size: 12px; color: #718096;">Record of all authorized payroll uploads, overrides, and downloadable source files.</p>
 
       <table>
         <thead>
@@ -506,10 +506,11 @@
             <th>PAYROLL PERIOD</th>
             <th>ACTION STATUS</th>
             <th>DATE & TIME</th>
+            <th style="text-align: center;">DOWNLOAD FILE</th>
           </tr>
         </thead>
         <tbody id="historyTableBody">
-          <tr><td colspan="6" style="text-align: center;">Loading history...</td></tr>
+          <tr><td colspan="7" style="text-align: center;">Loading history...</td></tr>
         </tbody>
       </table>
 
@@ -570,13 +571,24 @@
     let currentMappingClientId = null;
     let pendingPayrollWorksheet = null;
     let activeAuthorizedEmp = null;
+    let currentUploadFileData = null;
     let allEmployees = [];
     let allWhitelistedRecords = [];
     let draggedElement = null;
 
+    // Helper: Remove hyphens and whitespace to unify ID representation
     function cleanEmpId(id) {
       if (!id) return '';
       return String(id).replace(/[-\s]/g, '').trim().toUpperCase();
+    }
+
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
     }
 
     function formatDateDisplay(dateStr) {
@@ -620,6 +632,7 @@
       return cell ? cell.v : null;
     }
 
+    /* --- EXCEL FORMULA EVALUATION ENGINE --- */
     function evaluateFormulaOrCol(inputExpr, worksheet, rowNumber) {
       if (!inputExpr) return 0;
       let expr = String(inputExpr).trim();
@@ -745,9 +758,14 @@
       }
     }
 
+    /* --- WHITELIST MANAGEMENT MODULE --- */
     function toggleWhitelistPanel() {
       const panel = document.getElementById("whitelistPanel");
-      panel.style.display = panel.style.display === "flex" ? "none" : "flex";
+      if (panel.style.display === "flex") {
+        panel.style.display = "none";
+      } else {
+        panel.style.display = "flex";
+      }
     }
 
     function loadWhitelist() {
@@ -818,6 +836,7 @@
             const cleaned = cleanEmpId(rawVal);
             if (!cleaned) continue;
 
+            // Check for internal duplicate inside uploaded file
             if (seenCleanedIds.has(cleaned)) {
               duplicatesFound = true;
               break;
@@ -827,7 +846,7 @@
           }
 
           if (duplicatesFound) {
-            alert("UPLOAD REJECTED: The Excel file contains duplicate Employee IDs.");
+            alert("UPLOAD REJECTED: The Excel file contains duplicate Employee IDs (ignoring hyphens/spaces). Please clean the list and try again.");
             fileInput.value = "";
             return;
           }
@@ -838,11 +857,12 @@
             return;
           }
 
-          if (!confirm(`Uploading will OVERWRITE the current whitelist with ${parsedIds.length} new IDs. Proceed?`)) {
+          if (!confirm(`Uploading will OVERWRITE the current whitelist with ${parsedIds.length} new IDs. Do you want to proceed?`)) {
             fileInput.value = "";
             return;
           }
 
+          // Step 1: Wipe all old whitelist documents
           const existingSnapshot = await db.collection("whitelist").get();
           let deleteBatch = db.batch();
           let delCount = 0;
@@ -857,6 +877,7 @@
           });
           if (delCount > 0) await deleteBatch.commit();
 
+          // Step 2: Save new whitelist IDs
           let writeBatch = db.batch();
           let writeCount = 0;
 
@@ -878,11 +899,13 @@
 
           alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedIds.length} IDs uploaded.`);
           fileInput.value = "";
+
         } catch (err) {
           alert("Error processing whitelist file: " + err.message);
           fileInput.value = "";
         }
       };
+
       reader.readAsArrayBuffer(file);
     }
 
@@ -892,6 +915,7 @@
 
       const rawVal = input.trim();
       const cleaned = cleanEmpId(rawVal);
+
       if (!cleaned) return alert("Invalid ID number.");
 
       const existingDoc = await db.collection("whitelist").doc(cleaned).get();
@@ -929,12 +953,14 @@
       }
     }
 
+    /* --- DYNAMIC MAPPING BUILDER --- */
     function openMappingModal(clientId) {
       currentMappingClientId = clientId;
       const client = clientsList.find(c => c.id === clientId);
       document.getElementById("mappingModalTitle").innerText = `Map Columns for: ${client.name}`;
 
       const mapping = client.mapping || {};
+
       document.getElementById("empIdColInput").value = mapping.empIdCol || "F";
       document.getElementById("empNameColInput").value = mapping.empNameCol || "G";
 
@@ -970,12 +996,13 @@
 
       row.innerHTML = `
         <span class="drag-handle" title="Drag to reorder">☰</span>
-        <input type="text" class="map-input-name" placeholder="TYPE NAME" value="${label}">
-        <input type="text" class="map-input-unit" placeholder="UNIT" value="${unit}">
-        <input type="text" class="map-input-col map-input-qty" placeholder="QTY COL" value="${qtyCol}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="AMT COL" value="${amtCol}">
-        <button class="btn-icon-danger" onclick="removeMappingRow(this)">×</button>
+        <input type="text" class="map-input-name" placeholder="TYPE NAME (E.G. REGULAR DAYS)" value="${label}">
+        <input type="text" class="map-input-unit" placeholder="UNIT (E.G. DAYS)" value="${unit}">
+        <input type="text" class="map-input-col map-input-qty" placeholder="QTY COL / FORMULA" value="${qtyCol}">
+        <input type="text" class="map-input-col map-input-amt" placeholder="AMT COL / FORMULA" value="${amtCol}">
+        <button class="btn-icon-danger" onclick="removeMappingRow(this)" title="Delete Slot">×</button>
       `;
+
       setupDragAndDrop(row, container);
       container.appendChild(row);
     }
@@ -998,9 +1025,10 @@
         <span class="drag-handle" title="Drag to reorder">☰</span>
         <input type="text" class="map-input-name" placeholder="ITEM NAME" value="${label}" style="flex: 2.2;">
         <input type="text" class="map-input-unit" placeholder="UNIT" value="${unit}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="COL OR FORMULA" value="${col}">
-        <button class="btn-icon-danger" onclick="removeMappingRow(this)">×</button>
+        <input type="text" class="map-input-col map-input-amt" placeholder="COL OR FORMULA (E.G. =A1+A2)" value="${col}">
+        <button class="btn-icon-danger" onclick="removeMappingRow(this)" title="Delete Slot">×</button>
       `;
+
       setupDragAndDrop(row, container);
       container.appendChild(row);
     }
@@ -1009,17 +1037,24 @@
       row.addEventListener("dragstart", (e) => {
         draggedElement = row;
         row.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
       });
+
       row.addEventListener("dragend", () => {
         draggedElement = null;
         row.classList.remove("dragging");
       });
+
       container.addEventListener("dragover", (e) => {
         e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
         const afterElement = getDragAfterElement(container, e.clientY);
         if (draggedElement && draggedElement.parentElement === container) {
-          if (afterElement == null) container.appendChild(draggedElement);
-          else container.insertBefore(draggedElement, afterElement);
+          if (afterElement == null) {
+            container.appendChild(draggedElement);
+          } else {
+            container.insertBefore(draggedElement, afterElement);
+          }
         }
       });
     }
@@ -1029,12 +1064,18 @@
       return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-        else return closest;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
       }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    function removeMappingRow(btn) { btn.closest(".mapping-row").remove(); }
+    function removeMappingRow(btn) {
+      btn.closest(".mapping-row").remove();
+    }
+
     function closeMappingModal() {
       document.getElementById("mappingModal").style.display = "none";
       currentMappingClientId = null;
@@ -1048,7 +1089,9 @@
         const unit = r.querySelector(".map-input-unit").value.trim().toUpperCase();
         const qtyCol = r.querySelector(".map-input-qty").value.trim().toUpperCase();
         const amtCol = r.querySelector(".map-input-amt").value.trim().toUpperCase();
-        if (label || qtyCol || amtCol) items.push({ label, unit, qtyCol, amtCol });
+        if (label || qtyCol || amtCol) {
+          items.push({ label, unit, qtyCol, amtCol });
+        }
       });
       return items;
     }
@@ -1060,13 +1103,16 @@
         const label = r.querySelector(".map-input-name").value.trim().toUpperCase();
         const unit = r.querySelector(".map-input-unit").value.trim().toUpperCase();
         const col = r.querySelector(".map-input-amt").value.trim().toUpperCase();
-        if (label || col) items.push({ label, unit, col });
+        if (label || col) {
+          items.push({ label, unit, col });
+        }
       });
       return items;
     }
 
     async function saveClientMapping() {
       if (!currentMappingClientId) return;
+
       const mappingData = {
         empIdCol: document.getElementById("empIdColInput").value.trim().toUpperCase(),
         empNameCol: document.getElementById("empNameColInput").value.trim().toUpperCase(),
@@ -1079,30 +1125,110 @@
         netPayCol: document.getElementById("netPayColInput").value.trim().toUpperCase(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
+
       try {
         await db.collection("clients").doc(currentMappingClientId).set({ mapping: mappingData }, { merge: true });
-        alert("Custom Column Mapping saved successfully!");
+        alert("Custom Column Mapping & Formulas saved successfully!");
         closeMappingModal();
       } catch (err) {
         alert("Error saving mapping: " + err.message);
       }
     }
 
+    /* --- PAYSLIP PREVIEW --- */
     function openPayslipPreview() {
       const client = clientsList.find(c => c.id === currentMappingClientId);
-      document.getElementById("prevClientTitle").innerText = client ? client.name : "CLIENT";
+      
+      document.getElementById("prevClientTitle").innerText = client ? client.name : "TECDIA CEBU INC.";
+
       const pDateInput = document.getElementById("authPayrollDate").value;
       const pFromInput = document.getElementById("authPeriodFrom").value;
       const pToInput = document.getElementById("authPeriodTo").value;
 
-      document.getElementById("prevPayrollDateTitle").innerText = pDateInput ? formatDateDisplay(pDateInput) : "JULY 15, 2026";
-      document.getElementById("prevPayrollPeriodTitle").innerText = (pFromInput && pToInput) ? `${formatDateDisplay(pFromInput)} - ${formatDateDisplay(pToInput)}` : "JUNE 26 - JULY 10, 2026";
+      const displayPayrollDate = pDateInput ? formatDateDisplay(pDateInput) : "JULY 15, 2026";
+      const displayPeriod = (pFromInput && pToInput) 
+        ? `${formatDateDisplay(pFromInput)} - ${formatDateDisplay(pToInput)}` 
+        : "JUNE 26 - JULY 10, 2026";
+
+      document.getElementById("prevPayrollDateTitle").innerText = displayPayrollDate;
+      document.getElementById("prevPayrollPeriodTitle").innerText = displayPeriod;
+
+      const empIdCol = document.getElementById("empIdColInput").value.trim().toUpperCase() || "F";
+      const empNameCol = document.getElementById("empNameColInput").value.trim().toUpperCase() || "G";
+
+      document.getElementById("prevEmpId").innerText = `831016 (COL: ${empIdCol})`;
+      document.getElementById("prevEmpName").innerText = `COLES, BENJELEN (COL: ${empNameCol})`;
+
+      const earnings = extractEarningsData();
+      const deductions = extractStandardData("deductionsList");
+      const adjustments = extractStandardData("adjustmentsList");
+
+      renderEarningsPreview("prevEarningsBody", earnings);
+      renderStandardPreview("prevDeductionsBody", deductions);
+      renderStandardPreview("prevAdjustmentsBody", adjustments);
+
+      const grossCol = document.getElementById("grossPayColInput").value.trim().toUpperCase() || "BB";
+      const totalDedCol = document.getElementById("totalDeductionsColInput").value.trim().toUpperCase();
+      const totalAdjCol = document.getElementById("totalAdjustmentsColInput").value.trim().toUpperCase();
+      const netCol = document.getElementById("netPayColInput").value.trim().toUpperCase() || "BD";
+
+      document.getElementById("prevGrossVal").innerText = `15,450.00 (COL: ${grossCol})`;
+      document.getElementById("prevDedVal").innerText = totalDedCol ? `1,200.00 (COL: ${totalDedCol})` : `1,200.00`;
+      document.getElementById("prevAdjVal").innerText = totalAdjCol ? `3,000.00 (COL: ${totalAdjCol})` : `3,000.00`;
+      document.getElementById("prevNetVal").innerText = `17,250.00 (COL: ${netCol})`;
 
       document.getElementById("previewModal").style.display = "flex";
     }
 
-    function closePayslipPreview() { document.getElementById("previewModal").style.display = "none"; }
+    function renderEarningsPreview(targetId, items) {
+      const tbody = document.getElementById(targetId);
+      tbody.innerHTML = "";
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #a0aec0;">No mapped earnings items.</td></tr>`;
+        return;
+      }
+      items.forEach(item => {
+        const tr = document.createElement("tr");
+        const qtyColStr = item.qtyCol ? `(${item.qtyCol})` : '';
+        const amtColStr = item.amtCol ? `(${item.amtCol})` : '';
+        tr.innerHTML = `
+          <td><strong>${item.label || "---"}</strong></td>
+          <td style="text-align: center;">
+            11.00 <span style="font-size: 10px; color: #2b6cb0;">${qtyColStr}</span>
+          </td>
+          <td style="text-align: right; font-weight: bold;">
+            540.00 <span style="font-size: 10px; color: #2b6cb0;">${amtColStr}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
+    function renderStandardPreview(targetId, items) {
+      const tbody = document.getElementById(targetId);
+      tbody.innerHTML = "";
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #a0aec0;">No mapped items.</td></tr>`;
+        return;
+      }
+      items.forEach(item => {
+        const tr = document.createElement("tr");
+        const colStr = item.col ? `(${item.col})` : '';
+        tr.innerHTML = `
+          <td><strong>${item.label || "---"}</strong></td>
+          <td style="text-align: right; font-weight: bold;">
+            1,500.00 <span style="font-size: 10px; color: #2b6cb0;">${colStr}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function closePayslipPreview() {
+      document.getElementById("previewModal").style.display = "none";
+    }
+
+    /* --- UPLOAD PROCESS & EXCEL PARSING --- */
     async function verifyAuthorizationAndUpload() {
       const clientId = document.getElementById("authClientSelect").value;
       const payrollDate = document.getElementById("authPayrollDate").value;
@@ -1113,14 +1239,14 @@
 
       let missingFields = [];
       if (!clientId) missingFields.push("Select Company / Client");
-      if (!payrollDate) missingFields.push("Payroll Date");
-      if (!periodFrom) missingFields.push("Payroll Period (From)");
-      if (!periodTo) missingFields.push("Payroll Period (Up To)");
+      if (!payrollDate) missingFields.push("Payroll Date Box (Month-Day-Year)");
+      if (!periodFrom) missingFields.push("Payroll Period Box (From Date)");
+      if (!periodTo) missingFields.push("Payroll Period Box (Up To Date)");
       if (!rawEmpId) missingFields.push("Employee ID");
       if (!pin) missingFields.push("PIN");
 
       if (missingFields.length > 0) {
-        alert("UPLOAD CANNOT PROCEED!\nMissing required fields:\n• " + missingFields.join("\n• "));
+        alert("UPLOAD CANNOT PROCEED!\n\nThe following required field(s) are missing:\n\n• " + missingFields.join("\n• "));
         return;
       }
 
@@ -1134,6 +1260,7 @@
         if (empData.canOverride !== true) return alert("ACCESS DENIED: You do not have Upload/Override permissions.");
 
         const clientObj = clientsList.find(c => c.id === clientId);
+
         activeAuthorizedEmp = { 
           id: cleanedId, 
           clientId: clientId,
@@ -1146,6 +1273,7 @@
         };
 
         document.getElementById("publicPayrollFileInput").click();
+
       } catch (err) {
         alert("Verification error: " + err.message);
       }
@@ -1160,18 +1288,22 @@
       reader.onload = async function (e) {
         try {
           const arrayBuffer = e.target.result;
+          
+          currentUploadFileData = {
+            fileName: file.name,
+            fileBase64: arrayBufferToBase64(arrayBuffer)
+          };
+
           const data = new Uint8Array(arrayBuffer);
           const workbook = XLSX.read(data, { type: 'array', raw: false });
 
-          // REQUIREMENT 1: Case-insensitive check for sheet named "Payroll" or payroll
-          const payrollSheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === "payroll");
-          if (!payrollSheetName) {
-            alert("SECURITY REJECTED: Worksheet named 'Payroll' (case-insensitive) not found in file.");
+          if (!workbook.SheetNames.includes("PAYROLL")) {
+            alert("SECURITY REJECTED: Worksheet named 'PAYROLL' not found in file.");
             fileInput.value = "";
             return;
           }
 
-          const worksheet = workbook.Sheets[payrollSheetName];
+          const worksheet = workbook.Sheets["PAYROLL"];
 
           const a1 = String(getCellValue(worksheet, "A", 1) || "").trim();
           const a2 = String(getCellValue(worksheet, "A", 2) || "").trim();
@@ -1199,16 +1331,19 @@
           }
 
           await executePayrollProcessing(worksheet, "UPLOAD", activeAuthorizedEmp.id);
+
         } catch (err) {
           alert("Error processing Excel file: " + err.message);
           fileInput.value = "";
         }
       };
+
       reader.readAsArrayBuffer(file);
     }
 
     function cancelOverrideUpload() {
       pendingPayrollWorksheet = null;
+      currentUploadFileData = null;
       document.getElementById("overrideAuthModal").style.display = "none";
       document.getElementById("publicPayrollFileInput").value = "";
     }
@@ -1217,7 +1352,10 @@
       const authId = document.getElementById("overrideEmpIdInput").value.trim();
       const authPin = document.getElementById("overridePinInput").value.trim();
 
-      if (!authId || !authPin) return alert("Please provide Authorized Employee ID and PIN.");
+      if (!authId || !authPin) {
+        alert("Please provide Authorized Employee ID and PIN to override.");
+        return;
+      }
 
       try {
         const cleanedId = cleanEmpId(authId);
@@ -1231,6 +1369,7 @@
         document.getElementById("overrideAuthModal").style.display = "none";
         await executePayrollProcessing(pendingPayrollWorksheet, "OVERRIDE", cleanedId);
         pendingPayrollWorksheet = null;
+
       } catch (err) {
         alert("Authorization Error: " + err.message);
       }
@@ -1289,7 +1428,12 @@
         const adjustmentItems = adjustmentsSchema.map(item => {
           const val = evaluateFormulaOrCol(item.col, worksheet, r);
           calculatedAdjustments += val;
-          return { label: item.label, unit: item.unit, col: item.col, val: val };
+          return {
+            label: item.label,
+            unit: item.unit,
+            col: item.col,
+            val: val
+          };
         });
         const finalTotalAdjustments = totalAdjustmentsCol ? evaluateFormulaOrCol(totalAdjustmentsCol, worksheet, r) : calculatedAdjustments;
 
@@ -1302,22 +1446,26 @@
           empName: empName,
           agencyName: "INT'L. MANPOWER ESSENTIALS, INC.",
           clientName: activeAuthorizedEmp.clientName,
+          
           payrollDateRaw: activeAuthorizedEmp.payrollDate,
           payrollDateStr: activeAuthorizedEmp.payrollDateStr,
           payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
           payrollPeriodTo: activeAuthorizedEmp.periodTo,
           payrollPeriodStr: activeAuthorizedEmp.payrollPeriodStr,
+
           earningsItems: earningsItems,
           deductionItems: deductionItems,
           adjustmentItems: adjustmentItems,
+
           grossPay: finalGrossPay,
           totalDeductions: finalTotalDeductions,
           totalAdjustments: finalTotalAdjustments,
           netPay: finalNetPay,
+
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        const docRef = db.collection("payslips").doc(`${cleanedId}_${activeAuthorizedEmp.clientId}_${activeAuthorizedEmp.payrollDate}`);
+        const docRef = db.collection("payslips").doc(cleanedId);
         batch.set(docRef, payslipPayload, { merge: true });
 
         count++;
@@ -1341,7 +1489,6 @@
       }, { merge: true });
       count++;
 
-      // REQUIREMENT 5: Removed excel file base64 storage in history log to fix file size issue
       const historyRef = db.collection("payroll_history").doc();
       batch.set(historyRef, {
         uploaderId: uploaderId,
@@ -1349,6 +1496,8 @@
         payrollDate: activeAuthorizedEmp.payrollDateStr,
         payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
         status: actionType,
+        fileName: currentUploadFileData ? currentUploadFileData.fileName : "Payroll_Upload.xlsx",
+        fileBase64: currentUploadFileData ? currentUploadFileData.fileBase64 : "",
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
       count++;
@@ -1357,19 +1506,23 @@
 
       alert(`SUCCESS: Processed and saved ${totalUploaded} employee payslips.\nAction recorded as [${actionType}].`);
       document.getElementById("publicPayrollFileInput").value = "";
+      currentUploadFileData = null;
       showLandingScreen();
     }
 
+    /* --- HISTORY MODAL & DOWNLOADS --- */
     function openHistoryModal() {
       document.getElementById("historyModal").style.display = "flex";
       loadHistoryLogs();
     }
 
-    function closeHistoryModal() { document.getElementById("historyModal").style.display = "none"; }
+    function closeHistoryModal() {
+      document.getElementById("historyModal").style.display = "none";
+    }
 
     function loadHistoryLogs() {
       const tbody = document.getElementById("historyTableBody");
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Loading history...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Loading history...</td></tr>`;
 
       db.collection("payroll_history")
         .orderBy("timestamp", "desc")
@@ -1377,7 +1530,7 @@
         .then(snapshot => {
           tbody.innerHTML = "";
           if (snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #718096;">No history recorded yet.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #718096;">No history recorded yet.</td></tr>`;
             return;
           }
 
@@ -1387,6 +1540,10 @@
             const badgeClass = data.status === "OVERRIDE" ? "status-override" : "status-upload";
             const displayStatus = data.status === "OVERRIDE" ? "OVERRIDDEN" : "UPLOADED";
 
+            const downloadBtn = data.fileBase64 
+              ? `<button class="btn-success" style="padding: 4px 10px; font-size: 11px;" onclick="downloadHistoryFile('${doc.id}')">DOWNLOAD</button>` 
+              : `<span style="color: #a0aec0; font-size: 11px;">N/A</span>`;
+
             const tr = document.createElement("tr");
             tr.innerHTML = `
               <td><strong>${data.uploaderId || "---"}</strong></td>
@@ -1395,13 +1552,42 @@
               <td>${data.payrollPeriod || "---"}</td>
               <td><span class="status-badge ${badgeClass}">${displayStatus}</span></td>
               <td>${dateStr}</td>
+              <td style="text-align: center;">${downloadBtn}</td>
             `;
             tbody.appendChild(tr);
           });
         })
         .catch(err => {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Error loading history: ${err.message}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Error loading history: ${err.message}</td></tr>`;
         });
+    }
+
+    async function downloadHistoryFile(docId) {
+      try {
+        const doc = await db.collection("payroll_history").doc(docId).get();
+        if (!doc.exists) return alert("File record not found.");
+        
+        const data = doc.data();
+        if (!data.fileBase64) return alert("No download file attached to this log entry.");
+
+        const byteCharacters = atob(data.fileBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = data.fileName || `Payroll_${data.clientName || 'Export'}_${data.payrollDate || 'Date'}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      } catch (err) {
+        alert("Error downloading file: " + err.message);
+      }
     }
 
     function triggerExcelUpload() { document.getElementById("excelFileInput").click(); }
@@ -1472,11 +1658,13 @@
           if (invalidPins > 0) msg += `\n(${invalidPins} skipped: PIN was not 6 digits)`;
           alert(msg);
           fileInput.value = "";
+
         } catch (err) {
           alert("Error processing file: " + err.message);
           fileInput.value = "";
         }
       };
+
       reader.readAsArrayBuffer(file);
     }
 
