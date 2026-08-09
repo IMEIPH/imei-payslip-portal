@@ -3,519 +3,397 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Portal - Payroll, Mapping & Whitelist Management</title>
+  <title>Employee Payslip Portal</title>
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f7fafc; padding: 20px; display: flex; justify-content: center; }
-    .container { width: 100%; max-width: 1000px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    * { 
+      box-sizing: border-box; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+    }
+    body { 
+      background-color: #f8fafc; 
+      margin: 0;
+      padding: 40px 20px; 
+      display: flex; 
+      justify-content: center; 
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    .container { 
+      width: 100%; 
+      max-width: 620px; 
+      background: #ffffff; 
+      padding: 30px; 
+      border-radius: 10px; 
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); 
+      position: relative; 
+    }
     
-    .input-group { margin-bottom: 15px; }
-    label { font-weight: bold; display: block; margin-bottom: 5px; color: #4a5568; font-size: 13px; text-transform: uppercase; }
-    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; background: #fff; }
+    /* HEADER */
+    .portal-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 24px; 
+    }
+    .portal-header h2 { 
+      margin: 0; 
+      font-size: 20px; 
+      font-weight: 800; 
+      color: #1e293b; 
+      letter-spacing: -0.3px;
+    }
+    .btn-register-link { 
+      background: #27a365; 
+      color: white; 
+      border: none; 
+      padding: 8px 16px; 
+      border-radius: 6px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      font-size: 12px; 
+      text-transform: uppercase; 
+      letter-spacing: 0.3px;
+      transition: background 0.2s;
+    }
+    .btn-register-link:hover { 
+      background: #218854; 
+    }
+
+    /* FORM STYLING */
+    .login-section { 
+      padding-bottom: 5px; 
+    }
+    .input-group { 
+      margin-bottom: 18px; 
+    }
+    label { 
+      font-weight: 700; 
+      display: block; 
+      margin-bottom: 8px; 
+      color: #475569; 
+      font-size: 13px; 
+      letter-spacing: 0.2px;
+    }
+    input, select { 
+      width: 100%; 
+      padding: 11px 14px; 
+      border: 1px solid #cbd5e1; 
+      border-radius: 6px; 
+      font-size: 14px; 
+      background: #ffffff; 
+      color: #1e293b;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    input::placeholder, select {
+      color: #94a3b8;
+    }
     
-    button { padding: 10px 16px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-    button:hover { background: #2b6cb0; }
-    .btn-danger { background: #e53e3e; } .btn-danger:hover { background: #c53030; }
-    .btn-success { background: #38a169; } .btn-success:hover { background: #2f855a; }
-    .btn-warning { background: #dd6b20; } .btn-warning:hover { background: #c05621; }
-    .btn-dark { background: #4a5568; } .btn-dark:hover { background: #2d3748; }
-
-    #landingCard, #loginCard, #uploadAuthCard { max-width: 480px; margin: 40px auto; }
-    #adminDashboard, #loginCard, #uploadAuthCard { display: none; }
+    /* DATE GRID LAYOUT */
+    .date-grid { 
+      display: grid; 
+      grid-template-columns: 2.2fr 1fr 1fr; 
+      gap: 10px; 
+    }
     
-    .dashboard-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px; }
-    .section-title { background: #edf2f7; padding: 10px; font-weight: bold; color: #2d3748; border-radius: 6px; margin-top: 25px; margin-bottom: 15px; font-size: 14px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
-
-    .excel-toolbar { background: #ebf8ff; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 12px; }
-    .excel-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    /* WHITELIST PANEL STYLES */
-    .whitelist-panel { display: none; background: #f0fff4; border: 1px solid #c6f6d5; padding: 15px; border-radius: 8px; margin-top: 10px; flex-direction: column; gap: 12px; }
-    .whitelist-table-container { max-height: 250px; overflow-y: auto; background: white; border: 1px solid #cbd5e0; border-radius: 6px; margin-top: 8px; }
-
-    #uploadProgressContainer { display: none; background: #fffaf0; border: 1px solid #fbd38d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    progress { width: 100%; height: 20px; margin-top: 10px; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th { background: #f7fafc; text-align: left; padding: 10px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #4a5568; text-transform: uppercase; }
-    td { padding: 10px; border-bottom: 1px solid #edf2f7; font-size: 13px; }
+    .btn-primary { 
+      width: 100%; 
+      padding: 12px; 
+      background: #3182ce; 
+      color: white; 
+      border: none; 
+      border-radius: 6px; 
+      font-size: 15px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      margin-top: 6px; 
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { 
+      background: #2b6cb0; 
+    }
     
-    .pin-badge { font-family: monospace; font-weight: bold; background: #edf2f7; padding: 4px 8px; border-radius: 4px; }
-    .status-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
-    .status-upload { background: #c6f6d5; color: #22543d; }
-    .status-override { background: #feebc8; color: #744210; }
+    /* PAYSLIP DISPLAY STYLES */
+    .payslip-box { 
+      display: none; 
+      margin-top: 25px; 
+      border: 1px solid #cbd5e0; 
+      border-radius: 8px; 
+      padding: 25px; 
+      background: #fff; 
+    }
+    
+    .payslip-title { 
+      text-align: center; 
+      border-bottom: 2px dashed #cbd5e0; 
+      padding-bottom: 15px; 
+      margin-bottom: 20px; 
+    }
+    .payslip-title h2 { margin: 0 0 5px 0; color: #1a202c; text-transform: uppercase; font-size: 20px; }
+    .payslip-title h3 { margin: 0 0 5px 0; color: #4a5568; text-transform: uppercase; font-size: 16px; }
+    .payslip-title p { margin: 3px 0; color: #2d3748; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+    
+    .employee-info { border-bottom: 2px dashed #cbd5e0; padding-bottom: 15px; margin-bottom: 20px; }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; text-transform: uppercase; }
+    .info-row strong { color: #4a5568; }
 
+    .section-header { background: #edf2f7; padding: 8px 10px; font-weight: bold; color: #2d3748; text-transform: uppercase; margin-top: 15px; border-radius: 4px; font-size: 14px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 15px; }
+    .table th { padding: 8px 10px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #718096; text-transform: uppercase; }
+    .table td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; font-size: 13px; text-transform: uppercase; }
+    
+    .text-left { text-align: left; }
+    .text-center { text-align: center; }
+    .amount { text-align: right; font-weight: bold; }
+    
+    .highlight-row { background: #ebf8ff; font-weight: bold; color: #2b6cb0; }
+    .net-pay-row { background: #c6f6d5; font-weight: bold; color: #22543d; font-size: 15px; }
+
+    /* ACTION BUTTONS (SAVE & PRINT) */
+    .payslip-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .btn-save {
+      flex: 1;
+      padding: 12px;
+      background: #2b6cb0;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .btn-save:hover { background: #2c5282; }
+    .btn-print {
+      flex: 1;
+      padding: 12px;
+      background: #4a5568;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .btn-print:hover { background: #2d3748; }
+
+    .error-msg { color: #e53e3e; font-weight: bold; text-align: center; margin-top: 15px; display: none; font-size: 14px; }
+
+    /* MODAL STYLES FOR REGISTER ID */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .modal-header h3 { margin: 0; color: #2d3748; }
+    .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #a0aec0; }
+    .close-btn:hover { color: #2d3748; }
 
-    /* MAPPING BUILDER STYLES */
-    .mapping-section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; margin: 18px 0 8px 0; font-weight: bold; font-size: 13px; }
-    .header-info { background: #edf2f7; color: #2d3748; border-left: 4px solid #4a5568; }
-    .header-earnings { background: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
-    .header-gross { background: #bbdefb; color: #0d47a1; border-left: 4px solid #0d47a1; }
-    .header-deductions { background: #fff3e0; color: #e65100; border-left: 4px solid #e65100; }
-    .header-adjustments { background: #f3e5f5; color: #6a1b9a; border-left: 4px solid #6a1b9a; }
-    .header-net { background: #e8f5e9; color: #1b5e20; border-left: 4px solid #1b5e20; }
-
-    .mapping-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; min-height: 10px; }
-    .mapping-row { display: flex; gap: 6px; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; cursor: move; }
-    .mapping-row.dragging { opacity: 0.4; border: 2px dashed #3182ce; }
-    .drag-handle { cursor: grab; font-weight: bold; color: #a0aec0; padding: 0 4px; font-size: 16px; user-select: none; }
-    .map-input-name { flex: 2; text-transform: uppercase; font-size: 12px; }
-    .map-input-unit { flex: 1; text-transform: uppercase; font-size: 12px; }
-    .map-input-col { flex: 1.2; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px; }
-    .btn-icon-danger { background: #fed7d7; color: #9b2c2c; border: none; border-radius: 4px; padding: 8px 10px; cursor: pointer; font-weight: bold; }
-    .btn-icon-danger:hover { background: #feb2b2; }
-
-    .duplicate-info-box { background: #fff5f5; border: 1px solid #feb2b2; padding: 12px; border-radius: 6px; margin: 15px 0; font-size: 13px; color: #9b2c2c; }
-
-    /* PREVIEW PAYSLIP STYLES */
-    .payslip-preview-card { border: 2px dashed #3182ce; padding: 20px; background: #fff; border-radius: 8px; margin-top: 15px; }
-    .payslip-header-box { border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 15px; text-align: center; }
-    .payslip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-    .payslip-table { width: 100%; border-collapse: collapse; }
-    .payslip-table th { background: #edf2f7; font-size: 11px; padding: 6px; text-align: left; }
-    .payslip-table td { padding: 6px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-    .payslip-total-row { font-weight: bold; background: #f7fafc; }
+    /* PRINT MEDIA STYLES */
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      .portal-header, .login-section, .payslip-actions, .modal-overlay { display: none !important; }
+      .payslip-box { display: block !important; border: none; padding: 0; margin-top: 0; }
+    }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- HTML2PDF LIBRARY FOR PDF GENERATION -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
-  <!-- LANDING CARD -->
-  <div id="landingCard" class="container" style="text-align: center;">
-    <h2>PAYSLIP SYSTEM ADMIN</h2>
-    <p style="color: #718096; margin-bottom: 25px;">Select an action to continue</p>
-    <div style="display: flex; flex-direction: column; gap: 15px;">
-      <button class="btn-success" style="padding: 15px; font-size: 16px;" onclick="showUploadAuthScreen()">UPLOAD PAYROLL</button>
-      <button class="btn-dark" style="padding: 15px; font-size: 16px;" onclick="showLoginScreen()">ADMIN LOGIN</button>
-    </div>
-  </div>
-
-  <!-- ADMIN LOGIN CARD -->
-  <div id="loginCard" class="container">
-    <h2 style="text-align: center; margin-top: 0;">ADMIN LOGIN</h2>
-    <div class="input-group">
-      <label>ADMIN EMAIL</label>
-      <input type="email" id="adminEmail" placeholder="admin@company.com">
-    </div>
-    <div class="input-group">
-      <label>PASSWORD</label>
-      <input type="password" id="adminPass" placeholder="ENTER PASSWORD">
-    </div>
-    <div style="display: flex; gap: 10px;">
-      <button class="btn-dark" style="width: 30%;" onclick="showLandingScreen()">BACK</button>
-      <button style="width: 70%;" onclick="loginAdmin()">LOGIN</button>
-    </div>
-    <div id="loginErr" style="color: red; font-weight: bold; margin-top: 10px; text-align: center;"></div>
-  </div>
-
-  <!-- UPLOAD PAYROLL AUTHORIZATION CARD -->
-  <div id="uploadAuthCard" class="container">
-    <h2 style="text-align: center; margin-top: 0;">PAYROLL UPLOAD AUTHORIZATION</h2>
-    
-    <div class="input-group">
-      <label>SELECT COMPANY / CLIENT</label>
-      <select id="authClientSelect">
-        <option value="">-- SELECT CLIENT --</option>
-      </select>
+  <div class="container">
+    <div class="portal-header">
+      <h2>EMPLOYEE PAYSLIP PORTAL</h2>
+      <button class="btn-register-link" onclick="openRegisterModal()">REGISTER ID</button>
     </div>
 
-    <div class="input-group">
-      <label>PAYROLL DATE (MONTH - DAY - YEAR)</label>
-      <input type="date" id="authPayrollDate">
-    </div>
-
-    <div style="display: flex; gap: 10px;">
-      <div class="input-group" style="flex: 1;">
-        <label>PAYROLL PERIOD (FROM)</label>
-        <input type="date" id="authPeriodFrom">
+    <div class="login-section">
+      <div class="input-group">
+        <label>EMPLOYEE ID NUMBER</label>
+        <input type="text" id="empId" placeholder="ENTER ID NUMBER (e.g. IS058 or IS-058)">
       </div>
-      <div class="input-group" style="flex: 1;">
-        <label>PAYROLL PERIOD (UP TO)</label>
-        <input type="date" id="authPeriodTo">
-      </div>
-    </div>
-
-    <div class="input-group">
-      <label>EMPLOYEE ID</label>
-      <input type="text" id="authIdInput" placeholder="ENTER ID">
-    </div>
-    
-    <div class="input-group">
-      <label>PIN</label>
-      <input type="password" id="authPinInput" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
-    </div>
-
-    <input type="file" id="publicPayrollFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handlePublicPayrollUpload()">
-    
-    <div style="display: flex; gap: 10px;">
-      <button class="btn-dark" style="width: 30%;" onclick="showLandingScreen()">BACK</button>
-      <button class="btn-success" style="width: 70%;" onclick="verifyAuthorizationAndUpload()">AUTHORIZE & SELECT FILE</button>
-    </div>
-  </div>
-
-  <!-- MAIN ADMIN DASHBOARD -->
-  <div id="adminDashboard" class="container">
-    <div class="dashboard-header">
-      <h2>PAYSLIP ADMIN DASHBOARD</h2>
-      <div>
-        <button class="btn-dark" style="margin-right: 10px;" onclick="openHistoryModal()">HISTORY</button>
-        <button class="btn-danger" onclick="logoutAdmin()">LOGOUT</button>
-      </div>
-    </div>
-
-    <!-- CLIENT MANAGEMENT & COLUMN MAPPING -->
-    <div class="section-title">Manage Clients & Column Mappings</div>
-    <div style="background: #f7fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <input type="text" id="newClientName" placeholder="Enter New Client Name (e.g. TECDIA CEBU INC.)">
-        <button class="btn-success" onclick="addNewClient()">ADD CLIENT</button>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>CLIENT NAME</th>
-            <th style="text-align: right;">ACTIONS</th>
-          </tr>
-        </thead>
-        <tbody id="clientListBody">
-          <tr><td colspan="2" style="text-align: center;">Loading clients...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- EXCEL TOOLBAR -->
-    <div class="excel-toolbar">
-      <strong>BULK EMPLOYEE MANAGEMENT (ID & PIN)</strong>
-      <div class="excel-actions">
-        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleFileSelected()">
-        <button class="btn-success" onclick="triggerExcelUpload()">UPLOAD EMPLOYEES (ID & PIN)</button>
-        <button class="btn-dark" onclick="downloadEmployeeExcel()">DOWNLOAD ALL PINs</button>
-        <button class="btn-warning" onclick="toggleWhitelistPanel()">WHITELIST</button>
-      </div>
-
-      <!-- WHITELIST EXPANDABLE PANEL -->
-      <div id="whitelistPanel" class="whitelist-panel">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <strong style="color: #276749;">WHITELIST MANAGEMENT</strong>
-          <span style="font-size: 11px; color: #4a5568;">Only whitelisted IDs are allowed to self-register</span>
-        </div>
-
-        <div class="excel-actions">
-          <input type="file" id="whitelistFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleWhitelistUpload()">
-          <button class="btn-success" onclick="triggerWhitelistUpload()">UPLOAD WHITELIST</button>
-          <button class="btn-dark" onclick="manuallyAddWhitelist()">ADD WHITELIST</button>
-          <button class="btn-warning" onclick="downloadWhitelistExcel()">DOWNLOAD WHITELIST</button>
-        </div>
-
-        <div style="margin-top: 5px;">
-          <input type="text" id="whitelistSearchInput" placeholder="Search Whitelisted ID Number..." onkeyup="filterWhitelistTable()">
-        </div>
-
-        <div class="whitelist-table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>WHITELISTED ID NUMBER</th>
-                <th style="text-align: right;">ACTION</th>
-              </tr>
-            </thead>
-            <tbody id="whitelistTableBody">
-              <tr><td colspan="2" style="text-align: center;">Loading whitelist...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- UPLOAD PROGRESS BAR -->
-    <div id="uploadProgressContainer">
-      <strong id="uploadStatusText" style="color: #dd6b20;">Processing Excel file...</strong>
-      <progress id="uploadProgressBar" value="0" max="100"></progress>
-    </div>
-
-    <!-- SEARCH -->
-    <div class="input-group" style="margin-top: 20px;">
-      <label>SEARCH ALL RECORDS</label>
-      <input type="text" id="searchInput" placeholder="Search Employee ID or Name across lists..." onkeyup="filterAllTables()">
-    </div>
-
-    <!-- REGISTERED EMPLOYEES & PERMISSIONS -->
-    <div class="section-title">Registered Employees & Permissions</div>
-    <table>
-      <thead>
-        <tr>
-          <th>EMPLOYEE ID</th>
-          <th>NAME</th>
-          <th>CURRENT PIN</th>
-          <th>OVERRIDE PERMISSION</th>
-          <th style="text-align: right;">ACTION</th>
-        </tr>
-      </thead>
-      <tbody id="employeeBody">
-        <tr><td colspan="5" style="text-align: center;">Loading employees...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- DYNAMIC COLUMN MAPPING MODAL -->
-  <div id="mappingModal" class="modal-overlay">
-    <div class="modal-content">
-      <h3 id="mappingModalTitle" style="margin-top: 0; color: #2b6cb0;">Custom Column Mapping</h3>
-      <p style="font-size: 12px; color: #718096; margin-bottom: 15px;">
-        Customize item names, unit headers, Qty columns, and Amount columns. Single columns (e.g. <code>AQ</code>) or Excel math formulas (e.g. <code>=A1+A2</code> or <code>=A+B-C</code> up to 5 cols) are supported. Drag rows (☰) to reorder.
-      </p>
-
-      <!-- EMPLOYEE IDENTIFICATION MAPPING -->
-      <div class="mapping-section-header header-info">
-        <span>EMPLOYEE IDENTIFICATION MAPPING</span>
-      </div>
-      <div style="display: flex; gap: 10px; background: #f8fafc; border: 1px solid #cbd5e0; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
-        <div style="flex: 1;">
-          <label style="font-size: 11px; margin-bottom: 3px;">EMPLOYEE ID COLUMN</label>
-          <input type="text" id="empIdColInput" placeholder="EXCEL COL (E.G. F)" style="text-transform: uppercase; font-weight: bold; text-align: center;">
-        </div>
-        <div style="flex: 1;">
-          <label style="font-size: 11px; margin-bottom: 3px;">EMPLOYEE NAME COLUMN</label>
-          <input type="text" id="empNameColInput" placeholder="EXCEL COL (E.G. G)" style="text-transform: uppercase; font-weight: bold; text-align: center;">
-        </div>
-      </div>
-
-      <!-- 1. EARNINGS SECTION (PAIRED QTY & AMOUNT) -->
-      <div class="mapping-section-header header-earnings">
-        <span>EARNINGS & HOURS SECTION (PAIRED HOURS/DAYS & AMOUNT)</span>
-        <button class="btn-success" style="padding: 4px 10px; font-size: 11px;" onclick="addEarningsRow()">+ ADD EARNINGS SLOT</button>
-      </div>
-      <div class="mapping-list" id="earningsList"></div>
-
-      <!-- 2. GROSS PAY -->
-      <div class="mapping-section-header header-gross">
-        <span>GROSS PAY</span>
-      </div>
-      <div class="mapping-row" style="cursor: default; background: #ebf8ff; margin-bottom: 15px;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL GROSS PAY" readonly style="flex: 3; font-weight: bold; background: #e2e8f0; font-size: 12px;">
-        <input type="text" id="grossPayColInput" placeholder="COL OR FORMULA (E.G. BB OR =A+B)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <!-- 3. DEDUCTIONS SECTION -->
-      <div class="mapping-section-header header-deductions">
-        <span>DEDUCTION SECTION</span>
-        <button class="btn-warning" style="padding: 4px 10px; font-size: 11px;" onclick="addStandardRow('deductionsList')">+ ADD DEDUCTION SLOT</button>
-      </div>
-      <div class="mapping-list" id="deductionsList"></div>
-
-      <!-- TOTAL DEDUCTIONS COLUMN MAPPING -->
-      <div class="mapping-row" style="cursor: default; background: #fff3e0; margin-bottom: 15px;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL DEDUCTIONS" readonly style="flex: 3; font-weight: bold; background: #ffe0b2; font-size: 12px; color: #e65100;">
-        <input type="text" id="totalDeductionsColInput" placeholder="COL OR FORMULA (E.G. DO OR =A1+A2)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <!-- 4. ADJUSTMENTS SECTION -->
-      <div class="mapping-section-header header-adjustments">
-        <span>ADJUSTMENTS SECTION</span>
-        <button class="btn-dark" style="padding: 4px 10px; font-size: 11px;" onclick="addStandardRow('adjustmentsList')">+ ADD ADJUSTMENT SLOT</button>
-      </div>
-      <div class="mapping-list" id="adjustmentsList"></div>
-
-      <!-- TOTAL ADJUSTMENTS COLUMN MAPPING -->
-      <div class="mapping-row" style="cursor: default; background: #f3e5f5; margin-bottom: 15px;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="TOTAL ADJUSTMENTS" readonly style="flex: 3; font-weight: bold; background: #e1bee7; font-size: 12px; color: #6a1b9a;">
-        <input type="text" id="totalAdjustmentsColInput" placeholder="COL OR FORMULA" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <!-- 5. NET TAKE HOME -->
-      <div class="mapping-section-header header-net">
-        <span>NET TAKE HOME</span>
-      </div>
-      <div class="mapping-row" style="cursor: default; background: #e8f5e9;">
-        <span style="width: 25px;"></span>
-        <input type="text" value="NET PAY" readonly style="flex: 3; font-weight: bold; background: #c8e6c9; font-size: 12px; color: #1b5e20;">
-        <input type="text" id="netPayColInput" placeholder="COL OR FORMULA (E.G. BD)" style="flex: 1.5; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 12px;">
-        <span style="width: 38px;"></span>
-      </div>
-
-      <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 25px;">
-        <button class="btn-warning" onclick="openPayslipPreview()">👁️ PREVIEW PAYSLIP VIEW</button>
-        <div style="display: flex; gap: 10px;">
-          <button onclick="closeMappingModal()" style="background: #a0aec0;">CANCEL</button>
-          <button class="btn-success" onclick="saveClientMapping()">SAVE MAPPING</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PAYSLIP ACTUAL VIEW PREVIEW MODAL -->
-  <div id="previewModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 850px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">
-        <h3 style="margin: 0; color: #2b6cb0;">EMPLOYEE PAYSLIP LIVE PREVIEW</h3>
-        <button class="btn-dark" style="padding: 4px 10px; font-size: 12px;" onclick="closePayslipPreview()">CLOSE PREVIEW</button>
-      </div>
-
-      <div class="payslip-preview-card">
-        <!-- HEADER HIERARCHY -->
-        <div class="payslip-header-box">
-          <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #1a202c; text-transform: uppercase;">
-            INT'L. MANPOWER ESSENTIALS, INC.
-          </h2>
-          <div style="font-size: 14px; font-weight: bold; color: #2b6cb0; margin-top: 4px; text-transform: uppercase;">
-            CLIENT : <span id="prevClientTitle">TECDIA CEBU INC.</span>
-          </div>
-          <div style="font-size: 13px; font-weight: bold; color: #4a5568; margin-top: 4px; text-transform: uppercase;">
-            PAYROLL : <span id="prevPayrollDateTitle">JULY 15, 2026</span>
-          </div>
-          <div style="font-size: 13px; font-weight: 500; color: #4a5568; margin-top: 2px; text-transform: uppercase;">
-            PAYROLL PERIOD: <span id="prevPayrollPeriodTitle">JUNE 26 - JULY 10, 2026</span>
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; background: #edf2f7; padding: 10px 15px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-bottom: 15px;">
-          <div>EMPLOYEE ID NUMBER: <span id="prevEmpId" style="color: #2b6cb0;">831016 (COL: F)</span></div>
-          <div>EMPLOYEE NAME: <span id="prevEmpName" style="color: #2b6cb0;">COLES, BENJELEN (COL: G)</span></div>
-        </div>
-
-        <!-- EARNINGS & HOURS -->
-        <div style="margin-bottom: 20px;">
-          <h4 style="margin: 0 0 8px 0; color: #1565c0; border-bottom: 2px solid #90caf9;">EARNINGS & HOURS</h4>
-          <table class="payslip-table">
-            <thead>
-              <tr>
-                <th style="width: 45%;">TYPE</th>
-                <th style="width: 25%; text-align: center;">HOURS / DAYS</th>
-                <th style="width: 30%; text-align: right;">AMOUNT</th>
-              </tr>
-            </thead>
-            <tbody id="prevEarningsBody"></tbody>
-          </table>
-        </div>
-
-        <div class="payslip-grid">
-          <!-- DEDUCTIONS TABLE -->
-          <div>
-            <h4 style="margin: 0 0 8px 0; color: #e65100; border-bottom: 2px solid #ffcc80;">DEDUCTIONS</h4>
-            <table class="payslip-table">
-              <thead>
-                <tr>
-                  <th>ITEM</th>
-                  <th style="text-align: right;">AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody id="prevDeductionsBody"></tbody>
-            </table>
-          </div>
-
-          <!-- ADJUSTMENTS TABLE -->
-          <div>
-            <h4 style="margin: 0 0 8px 0; color: #6a1b9a; border-bottom: 2px solid #ce93d8;">ADJUSTMENTS</h4>
-            <table class="payslip-table">
-              <thead>
-                <tr>
-                  <th>ITEM</th>
-                  <th style="text-align: right;">AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody id="prevAdjustmentsBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- PAY SUMMARY BOX -->
-        <div style="margin-top: 15px;">
-          <h4 style="margin: 0 0 8px 0; color: #1b5e20; border-bottom: 2px solid #a5d6a7;">PAY SUMMARY</h4>
-          <table class="payslip-table">
-            <tbody>
-              <tr>
-                <td><strong>TOTAL GROSS PAY</strong></td>
-                <td style="text-align: right; font-weight: bold;" id="prevGrossVal">15,450.00 (COL: BB)</td>
-              </tr>
-              <tr>
-                <td><strong>TOTAL DEDUCTIONS</strong></td>
-                <td style="text-align: right; font-weight: bold; color: #c53030;" id="prevDedVal">1,200.00</td>
-              </tr>
-              <tr>
-                <td><strong>TOTAL ADJUSTMENTS</strong></td>
-                <td style="text-align: right; font-weight: bold; color: #6a1b9a;" id="prevAdjVal">3,000.00</td>
-              </tr>
-              <tr class="payslip-total-row" style="background: #e8f5e9;">
-                <td style="font-size: 14px; color: #1b5e20;"><strong>NET TAKE HOME</strong></td>
-                <td style="text-align: right; font-size: 14px; color: #1b5e20;" id="prevNetVal">17,250.00 (COL: BD)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-        <button class="btn-dark" onclick="closePayslipPreview()">BACK TO MAPPING</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- DUPLICATE DETECTION & OVERRIDE MODAL -->
-  <div id="overrideAuthModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 450px;">
-      <h3 style="margin-top: 0; color: #c53030;">DUPLICATE RECORD DETECTED</h3>
-      <p style="font-size: 13px; color: #4a5568; margin-bottom: 5px;">A payroll record matching BOTH Client and Date already exists:</p>
       
-      <div class="duplicate-info-box">
-        <strong>CLIENT:</strong> <span id="dupClientText">---</span><br>
-        <strong>PAYROLL DATE:</strong> <span id="dupDateText">---</span>
+      <div class="input-group">
+        <label>PIN / PASSWORD</label>
+        <input type="password" id="pin" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
       </div>
-
-      <p style="font-size: 12px; color: #718096; margin-bottom: 10px;">To overwrite this existing record, enter an authorized Employee ID & PIN below:</p>
 
       <div class="input-group">
-        <label>AUTHORIZATION EMPLOYEE ID</label>
-        <input type="text" id="overrideEmpIdInput" placeholder="ENTER ID">
-      </div>
-      <div class="input-group">
-        <label>PIN</label>
-        <input type="password" id="overridePinInput" placeholder="ENTER PIN" maxlength="6">
+        <label>PAYROLL DATE</label>
+        <div class="date-grid">
+          <select id="pMonth">
+            <option value="">SELECT MONTH</option>
+            <option value="JANUARY">JANUARY</option>
+            <option value="FEBRUARY">FEBRUARY</option>
+            <option value="MARCH">MARCH</option>
+            <option value="APRIL">APRIL</option>
+            <option value="MAY">MAY</option>
+            <option value="JUNE">JUNE</option>
+            <option value="JULY">JULY</option>
+            <option value="AUGUST">AUGUST</option>
+            <option value="SEPTEMBER">SEPTEMBER</option>
+            <option value="OCTOBER">OCTOBER</option>
+            <option value="NOVEMBER">NOVEMBER</option>
+            <option value="DECEMBER">DECEMBER</option>
+          </select>
+          <input type="number" id="pDay" placeholder="DAY (e.g. 15)" min="1" max="31">
+          <input type="number" id="pYear" placeholder="YEAR (e.g. 2026)">
+        </div>
       </div>
 
-      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-        <button onclick="cancelOverrideUpload()" style="background: #a0aec0;">CANCEL</button>
-        <button class="btn-warning" onclick="verifyAndExecuteOverride()">OVERRIDE & UPLOAD</button>
+      <button class="btn-primary" onclick="viewPayslip()">VIEW PAYSLIP</button>
+      <div id="errorMsg" class="error-msg"></div>
+    </div>
+
+    <!-- PAYSLIP DISPLAY CONTAINER -->
+    <div id="payslipBox" class="payslip-box">
+      <div id="payslipPrintableArea">
+        <div class="payslip-title">
+          <h2 id="pA1">---</h2>
+          <h3 id="pA2">---</h3>
+          <p id="pA3">---</p>
+          <p id="pA4">---</p>
+        </div>
+
+        <div class="employee-info">
+          <div class="info-row">
+            <strong>EMPLOYEE ID NUMBER:</strong>
+            <span id="pF">---</span>
+          </div>
+          <div class="info-row">
+            <strong>EMPLOYEE NAME:</strong>
+            <span id="pG">---</span>
+          </div>
+        </div>
+
+        <!-- EARNINGS & HOURS SECTION -->
+        <div class="section-header">EARNINGS & HOURS</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-left" style="width: 50%;">TYPE</th>
+              <th class="text-center" style="width: 25%;">HOURS / DAYS</th>
+              <th class="amount" style="width: 25%;">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAS">0.00</td></tr>
+            <tr><td class="text-left">REG OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
+            <tr><td class="text-left">NP</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
+            <tr><td class="text-left">REG OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY PAY</td><td class="text-center" id="pBD">0</td><td class="amount" id="pBE">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY DUTY</td><td class="text-center" id="pBF">0</td><td class="amount" id="pBG">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY OT</td><td class="text-center" id="pBH">0</td><td class="amount" id="pBI">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY NP</td><td class="text-center" id="pBJ">0</td><td class="amount" id="pBK">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY DUTY</td><td class="text-center" id="pBL">0</td><td class="amount" id="pBM">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY OT</td><td class="text-center" id="pBN">0</td><td class="amount" id="pBO">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY NP</td><td class="text-center" id="pBP">0</td><td class="amount" id="pBQ">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY OT NP</td><td class="text-center" id="pBR">0</td><td class="amount" id="pBS">0.00</td></tr>
+            <tr><td class="text-left">REST DAY</td><td class="text-center" id="pBV">0</td><td class="amount" id="pBW">0.00</td></tr>
+            <tr><td class="text-left">REST DAY OT</td><td class="text-center" id="pBX">0</td><td class="amount" id="pBY">0.00</td></tr>
+            <tr><td class="text-left">REST DAY NP</td><td class="text-center" id="pBZ">0</td><td class="amount" id="pCA">0.00</td></tr>
+            <tr><td class="text-left">REST DAY NP OT</td><td class="text-center" id="pCB">0</td><td class="amount" id="pCC">0.00</td></tr>
+            <tr><td class="text-left">LEAVE WITH PAY</td><td class="text-center" id="pCT">0</td><td class="amount" id="pCU">0.00</td></tr>
+            <tr class="highlight-row">
+              <td colspan="2" class="text-left">GROSS PAY</td>
+              <td class="amount" id="pCX">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- DEDUCTIONS SECTION -->
+        <div class="section-header">DEDUCTIONS</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-left" style="width: 75%;">DEDUCTION ITEM</th>
+              <th class="amount" style="width: 25%;">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="text-left">WELFARE</td><td class="amount" id="pDA">0.00</td></tr>
+            <tr><td class="text-left">HEALTH INSURANCE</td><td class="amount" id="pDB">0.00</td></tr>
+            <tr><td class="text-left">INSURANCE CARD</td><td class="amount" id="pDC">0.00</td></tr>
+            <tr><td class="text-left">MISC.</td><td class="amount" id="pDD">0.00</td></tr>
+            <tr><td class="text-left">MEDICAL</td><td class="amount" id="pDE">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 1</td><td class="amount" id="pDF">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 2</td><td class="amount" id="pDG">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 3</td><td class="amount" id="pDR">0.00</td></tr>
+            <tr><td class="text-left">SSS LOAN</td><td class="amount" id="pDH">0.00</td></tr>
+            <tr><td class="text-left">SSS CALAMITY LOAN</td><td class="amount" id="pDI">0.00</td></tr>
+            <tr><td class="text-left">HDMF LOAN</td><td class="amount" id="pDJ">0.00</td></tr>
+            <tr><td class="text-left">HDMF CALAMITY LOAN</td><td class="amount" id="pDK">0.00</td></tr>
+            <tr class="highlight-row">
+              <td class="text-left">TOTAL DEDUCTIONS</td>
+              <td class="amount" id="pDO">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- ADJUSTMENTS & NET TAKE HOME SECTION -->
+        <div class="section-header">ADJUSTMENTS & NET TAKE HOME</div>
+        <table class="table">
+          <tbody>
+            <tr><td class="text-left" style="width: 75%;">PAYROLL ADJUSTMENT 1</td><td class="amount" style="width: 25%;" id="pDP">0.00</td></tr>
+            <tr><td class="text-left">PAYROLL ADJUSTMENT 2</td><td class="amount" id="pDQ">0.00</td></tr>
+            <tr><td class="text-left">REFUND SALARY</td><td class="amount" id="pDT">0.00</td></tr>
+            <tr class="net-pay-row">
+              <td class="text-left">NET PAY</td>
+              <td class="amount" id="pDV">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- BOTTOM ACTION BUTTONS -->
+      <div class="payslip-actions">
+        <button class="btn-save" onclick="savePayslipPDF()">SAVE AS PDF</button>
+        <button class="btn-print" onclick="printPayslip()">PRINT PAYSLIP</button>
       </div>
     </div>
   </div>
 
-  <!-- HISTORY MODAL -->
-  <div id="historyModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 900px;">
-      <h3 style="margin-top: 0; color: #2d3748;">UPLOAD & OVERRIDE HISTORY LOGS</h3>
-      <p style="font-size: 12px; color: #718096;">Record of all authorized payroll uploads and overrides.</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>UPLOADER ID</th>
-            <th>CLIENT NAME</th>
-            <th>PAYROLL DATE</th>
-            <th>PAYROLL PERIOD</th>
-            <th>ACTION STATUS</th>
-            <th>DATE & TIME</th>
-          </tr>
-        </thead>
-        <tbody id="historyTableBody">
-          <tr><td colspan="6" style="text-align: center;">Loading history...</td></tr>
-        </tbody>
-      </table>
-
-      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-        <button class="btn-dark" onclick="closeHistoryModal()">CLOSE</button>
+  <!-- REGISTER ID MODAL -->
+  <div id="registerModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>REGISTER NEW EMPLOYEE ID</h3>
+        <button class="close-btn" onclick="closeRegisterModal()">&times;</button>
       </div>
+      
+      <div class="input-group">
+        <label>EMPLOYEE ID NUMBER</label>
+        <input type="text" id="regEmpId" placeholder="e.g. IS058 or 1805423">
+      </div>
+      
+      <div class="input-group">
+        <label>DESIRED 6-DIGIT PIN</label>
+        <input type="password" id="regPin" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
+      </div>
+
+      <div class="input-group">
+        <label>RE-ENTER 6-DIGIT PIN</label>
+        <input type="password" id="regPinConfirm" placeholder="RE-ENTER 6-DIGIT PIN" maxlength="6">
+      </div>
+
+      <button class="btn-primary" style="background:#27a365;" onclick="submitRegistration()">SUBMIT REGISTRATION</button>
+      <div id="regStatus" style="margin-top: 10px; font-weight: bold; text-align: center; font-size: 14px;"></div>
     </div>
   </div>
 
@@ -532,1023 +410,302 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const auth = firebase.auth();
 
-    const DEFAULT_EARNINGS = [
-      { label: "REGULAR DAYS", unit: "DAYS", qtyCol: "AQ", amtCol: "AS" },
-      { label: "REGULAR OT", unit: "HOURS", qtyCol: "AT", amtCol: "AU" },
-      { label: "NIGHT DIFFERENTIAL", unit: "HOURS", qtyCol: "AV", amtCol: "AW" },
-      { label: "REGULAR OT NP", unit: "HOURS", qtyCol: "AX", amtCol: "AY" },
-      { label: "REST DAY", unit: "HOURS", qtyCol: "BV", amtCol: "BW" },
-      { label: "REST DAY OT", unit: "HOURS", qtyCol: "BX", amtCol: "BY" },
-      { label: "REST DAY NP", unit: "HOURS", qtyCol: "BZ", amtCol: "CA" },
-      { label: "REST DAY NP OT", unit: "HOURS", qtyCol: "CB", amtCol: "CC" },
-      { label: "LEAVE WITH PAY", unit: "DAYS", qtyCol: "", amtCol: "" }
-    ];
-
-    const DEFAULT_DEDUCTIONS = [
-      { label: "WELFARE", unit: "AMOUNT", col: "" },
-      { label: "HEALTH INSURANCE PREMIUM", unit: "AMOUNT", col: "" },
-      { label: "INSURANCE CARD", unit: "AMOUNT", col: "" },
-      { label: "MISC.", unit: "AMOUNT", col: "" },
-      { label: "MEDICAL", unit: "AMOUNT", col: "" },
-      { label: "SALARY LOAN 1", unit: "AMOUNT", col: "" },
-      { label: "SALARY LOAN 2", unit: "AMOUNT", col: "" },
-      { label: "SALARY LOAN 3", unit: "AMOUNT", col: "" },
-      { label: "SSS LOAN", unit: "AMOUNT", col: "" },
-      { label: "SSS CALAMITY LOAN", unit: "AMOUNT", col: "" },
-      { label: "HDMF LOAN", unit: "AMOUNT", col: "" },
-      { label: "HDMF CALAMITY LOAN", unit: "AMOUNT", col: "" }
-    ];
-
-    const DEFAULT_ADJUSTMENTS = [
-      { label: "PAYROLL ADJUSTMENT", unit: "AMOUNT", col: "" },
-      { label: "REFUND SALARY", unit: "AMOUNT", col: "" }
-    ];
-
-    let clientsList = [];
-    let currentMappingClientId = null;
-    let pendingPayrollWorksheet = null;
-    let activeAuthorizedEmp = null;
-    let allEmployees = [];
-    let allWhitelistedRecords = [];
-    let draggedElement = null;
-
-    function cleanEmpId(id) {
-      if (!id) return '';
-      return String(id).replace(/[-\s]/g, '').trim().toUpperCase();
+    /* Modal Control */
+    function openRegisterModal() {
+      document.getElementById("registerModal").style.display = "flex";
+      document.getElementById("regStatus").innerHTML = "";
+    }
+    
+    function closeRegisterModal() {
+      document.getElementById("registerModal").style.display = "none";
+      document.getElementById("regEmpId").value = "";
+      document.getElementById("regPin").value = "";
+      document.getElementById("regPinConfirm").value = "";
     }
 
-    function formatDateDisplay(dateStr) {
-      if (!dateStr) return "---";
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      const options = { month: 'long', day: 'numeric', year: 'numeric' };
-      return d.toLocaleDateString('en-US', options).toUpperCase();
-    }
+    /* Submit Registration Against Whitelist */
+    async function submitRegistration() {
+      const rawEmpId = document.getElementById("regEmpId").value.trim();
+      const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-    function showLandingScreen() {
-      document.getElementById("landingCard").style.display = "block";
-      document.getElementById("loginCard").style.display = "none";
-      document.getElementById("uploadAuthCard").style.display = "none";
-      document.getElementById("adminDashboard").style.display = "none";
-    }
+      const pin = document.getElementById("regPin").value.trim();
+      const pinConfirm = document.getElementById("regPinConfirm").value.trim();
+      const statusDiv = document.getElementById("regStatus");
 
-    function showLoginScreen() {
-      document.getElementById("landingCard").style.display = "none";
-      document.getElementById("loginCard").style.display = "block";
-      document.getElementById("uploadAuthCard").style.display = "none";
-    }
+      statusDiv.innerHTML = "";
 
-    function showUploadAuthScreen() {
-      document.getElementById("landingCard").style.display = "none";
-      document.getElementById("uploadAuthCard").style.display = "block";
-      populateClientDropdown();
-    }
-
-    function parseExcelNum(val) {
-      if (val === null || val === undefined || val === '') return 0;
-      const cleaned = String(val).replace(/[^0-9.-]/g, '');
-      const parsed = parseFloat(cleaned);
-      return isNaN(parsed) ? 0 : parsed;
-    }
-
-    function getCellValue(worksheet, colLetter, rowNumber) {
-      if (!colLetter) return null;
-      const cellAddress = colLetter.trim().toUpperCase() + rowNumber;
-      const cell = worksheet[cellAddress];
-      return cell ? cell.v : null;
-    }
-
-    function evaluateFormulaOrCol(inputExpr, worksheet, rowNumber) {
-      if (!inputExpr) return 0;
-      let expr = String(inputExpr).trim();
-      if (!expr) return 0;
-
-      if (expr.startsWith('=')) {
-        expr = expr.substring(1).trim();
-      }
-
-      if (/^[A-Za-z]+$/.test(expr)) {
-        return parseExcelNum(getCellValue(worksheet, expr, rowNumber));
-      }
-
-      const colTokens = expr.match(/\b[A-Za-z]+[0-9]*\b/g) || [];
-      const uniqueCols = [...new Set(colTokens.map(t => t.replace(/[0-9]/g, '').toUpperCase()))];
-
-      if (uniqueCols.length > 5) {
-        console.warn("Formula exceeds 5 unique column limit:", expr);
-        return 0;
-      }
-
-      let evalExpr = expr.toUpperCase();
-
-      colTokens.forEach(token => {
-        const colLetter = token.replace(/[0-9]/g, '');
-        const cellVal = parseExcelNum(getCellValue(worksheet, colLetter, rowNumber));
-        const tokenRegex = new RegExp('\\b' + token.toUpperCase() + '\\b', 'g');
-        evalExpr = evalExpr.replace(tokenRegex, cellVal < 0 ? `(${cellVal})` : cellVal);
-      });
-
-      if (!/^[0-9.+\-*/()\s]+$/.test(evalExpr)) {
-        console.warn("Formula contains unsupported characters:", evalExpr);
-        return 0;
-      }
-
-      try {
-        const result = new Function(`"use strict"; return (${evalExpr})`)();
-        return (isNaN(result) || !isFinite(result)) ? 0 : result;
-      } catch (err) {
-        console.error("Error evaluating formula:", expr, err);
-        return 0;
-      }
-    }
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("landingCard").style.display = "none";
-        document.getElementById("loginCard").style.display = "none";
-        document.getElementById("uploadAuthCard").style.display = "none";
-        document.getElementById("adminDashboard").style.display = "block";
-        loadClients();
-        loadEmployees();
-        loadWhitelist();
-      } else {
-        showLandingScreen();
-      }
-    });
-
-    async function loginAdmin() {
-      const email = document.getElementById("adminEmail").value.trim();
-      const pass = document.getElementById("adminPass").value.trim();
-      try {
-        await auth.signInWithEmailAndPassword(email, pass);
-      } catch (error) {
-        document.getElementById("loginErr").innerText = "ACCESS DENIED: " + error.message;
-      }
-    }
-
-    function logoutAdmin() { auth.signOut(); }
-
-    function loadClients() {
-      db.collection("clients").onSnapshot(snapshot => {
-        clientsList = [];
-        snapshot.forEach(doc => clientsList.push({ id: doc.id, ...doc.data() }));
-        renderClientsTable();
-        populateClientDropdown();
-      });
-    }
-
-    function renderClientsTable() {
-      const tbody = document.getElementById("clientListBody");
-      tbody.innerHTML = "";
-      if (clientsList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No clients added yet.</td></tr>`;
+      if (!empId || !pin || !pinConfirm) {
+        statusDiv.innerHTML = "<span style='color:red;'>PLEASE FILL IN ALL FIELDS.</span>";
         return;
       }
-      clientsList.forEach(client => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${client.name}</strong></td>
-          <td style="text-align: right;">
-            <button class="btn-warning" onclick="openMappingModal('${client.id}')">MAP COLUMNS</button>
-            <button class="btn-danger" onclick="deleteClient('${client.id}')">DELETE</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
 
-    function populateClientDropdown() {
-      const select = document.getElementById("authClientSelect");
-      select.innerHTML = `<option value="">-- SELECT CLIENT --</option>`;
-      clientsList.forEach(c => {
-        select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-      });
-    }
+      const pinRegex = /^\d{6}$/;
+      if (!pinRegex.test(pin)) {
+        statusDiv.innerHTML = "<span style='color:red;'>PIN MUST BE EXACTLY 6 DIGITS (NUMBERS ONLY).</span>";
+        return;
+      }
 
-    async function addNewClient() {
-      const name = document.getElementById("newClientName").value.trim().toUpperCase();
-      if (!name) return alert("Enter client name.");
+      if (pin !== pinConfirm) {
+        statusDiv.innerHTML = "<span style='color:red;'>PINS DO NOT MATCH. PLEASE TRY AGAIN.</span>";
+        return;
+      }
+
       try {
-        const docRef = db.collection("clients").doc();
-        await docRef.set({ name: name, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        document.getElementById("newClientName").value = "";
+        statusDiv.innerHTML = "<span style='color:blue;'>Validating Whitelist...</span>";
+
+        const whitelistDoc = await db.collection("whitelist").doc(empId).get();
+
+        if (!whitelistDoc.exists) {
+          statusDiv.innerHTML = "<span style='color:red;'>ID NOT AUTHORIZED / NOT IN WHITELIST.</span>";
+          return;
+        }
+
+        const empDoc = await db.collection("employees").doc(empId).get();
+        if (empDoc.exists && empDoc.data().pin) {
+          statusDiv.innerHTML = "<span style='color:red;'>THIS ID IS ALREADY REGISTERED. PLEASE LOG IN.</span>";
+          return;
+        }
+
+        await db.collection("employees").doc(empId).set({
+          empId: String(empId),
+          pin: String(pin),
+          registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        statusDiv.innerHTML = "<span style='color:green;'>REGISTRATION SUCCESSFUL! YOU CAN NOW LOG IN.</span>";
+        
+        setTimeout(() => {
+          closeRegisterModal();
+        }, 2000);
+
       } catch (err) {
-        alert("Error adding client: " + err.message);
+        console.error(err);
+        statusDiv.innerHTML = "<span style='color:red;'>ERROR: " + err.message + "</span>";
       }
     }
 
-    async function deleteClient(id) {
-      if (confirm("Delete this client and its column mappings?")) {
-        await db.collection("clients").doc(id).delete();
+    /* Helper function to clean and format amounts safely */
+    function formatVal(val) {
+      if (val === undefined || val === null || val === "" || val === "-") return "0.00";
+      const num = parseFloat(String(val).replace(/,/g, ''));
+      return isNaN(num) ? "0.00" : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatCount(val) {
+      if (val === undefined || val === null || val === "" || val === "0") return "-";
+      return val;
+    }
+
+    /* View Payslip Function */
+    async function viewPayslip() {
+      const rawEmpId = document.getElementById("empId").value.trim();
+      const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const pin = document.getElementById("pin").value.trim();
+      
+      const month = document.getElementById("pMonth").value;
+      const day = document.getElementById("pDay").value.trim();
+      const year = document.getElementById("pYear").value.trim();
+
+      const errorMsg = document.getElementById("errorMsg");
+      const box = document.getElementById("payslipBox");
+
+      errorMsg.style.display = "none";
+      box.style.display = "none";
+
+      if(!empId || !pin) {
+        errorMsg.innerText = "PLEASE ENTER BOTH EMPLOYEE ID AND PIN.";
+        errorMsg.style.display = "block";
+        return;
       }
-    }
 
-    function toggleWhitelistPanel() {
-      const panel = document.getElementById("whitelistPanel");
-      panel.style.display = panel.style.display === "flex" ? "none" : "flex";
-    }
+      if(!month || !day || !year) {
+        errorMsg.innerText = "PLEASE SELECT MONTH, AND TYPE BOTH DAY AND YEAR.";
+        errorMsg.style.display = "block";
+        return;
+      }
 
-    function loadWhitelist() {
-      db.collection("whitelist").onSnapshot(snapshot => {
-        allWhitelistedRecords = [];
+      try {
+        const empDoc = await db.collection("employees").doc(empId).get();
+        if(!empDoc.exists || String(empDoc.data().pin) !== String(pin)) {
+          errorMsg.innerText = "INVALID EMPLOYEE ID OR PIN.";
+          errorMsg.style.display = "block";
+          return;
+        }
+
+        const snapshot = await db.collection("payslips")
+          .where("empId", "==", empId)
+          .get();
+
+        if(snapshot.empty) {
+          errorMsg.innerText = "NO PAYSLIP RECORDS FOUND FOR THIS EMPLOYEE ID.";
+          errorMsg.style.display = "block";
+          return;
+        }
+
+        let matchedPayslip = null;
         snapshot.forEach(doc => {
-          allWhitelistedRecords.push({ id: doc.id, ...doc.data() });
+          const data = doc.data();
+          const pDateStr = String(data.payrollDate || "").toUpperCase();
+
+          if (pDateStr.includes(month) && pDateStr.includes(day) && pDateStr.includes(year)) {
+            matchedPayslip = data;
+          }
         });
-        renderWhitelistTable(allWhitelistedRecords);
-      });
-    }
 
-    function renderWhitelistTable(list) {
-      const tbody = document.getElementById("whitelistTableBody");
-      tbody.innerHTML = "";
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No Whitelisted IDs found.</td></tr>`;
-        return;
-      }
-      list.forEach(item => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${item.displayId || item.id}</strong></td>
-          <td style="text-align: right;">
-            <button class="btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteWhitelistId('${item.id}')">REMOVE</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function filterWhitelistTable() {
-      const q = cleanEmpId(document.getElementById("whitelistSearchInput").value);
-      const filtered = allWhitelistedRecords.filter(item => {
-        return cleanEmpId(item.id).includes(q) || cleanEmpId(item.displayId || '').includes(q);
-      });
-      renderWhitelistTable(filtered);
-    }
-
-    function triggerWhitelistUpload() {
-      document.getElementById("whitelistFileInput").click();
-    }
-
-    async function handleWhitelistUpload() {
-      const fileInput = document.getElementById("whitelistFileInput");
-      const file = fileInput.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', raw: false });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-          const parsedIds = [];
-          const seenCleanedIds = new Set();
-          let duplicatesFound = false;
-
-          for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length === 0) continue;
-
-            const rawVal = String(row[0] || "").trim();
-            if (!rawVal || rawVal.toUpperCase() === "ID" || rawVal.toUpperCase() === "EMPLOYEE ID") continue;
-
-            const cleaned = cleanEmpId(rawVal);
-            if (!cleaned) continue;
-
-            if (seenCleanedIds.has(cleaned)) {
-              duplicatesFound = true;
-              break;
-            }
-            seenCleanedIds.add(cleaned);
-            parsedIds.push({ raw: rawVal, clean: cleaned });
-          }
-
-          if (duplicatesFound) {
-            alert("UPLOAD REJECTED: The Excel file contains duplicate Employee IDs.");
-            fileInput.value = "";
-            return;
-          }
-
-          if (parsedIds.length === 0) {
-            alert("UPLOAD REJECTED: No valid ID numbers found in Column A.");
-            fileInput.value = "";
-            return;
-          }
-
-          if (!confirm(`Uploading will OVERWRITE the current whitelist with ${parsedIds.length} new IDs. Proceed?`)) {
-            fileInput.value = "";
-            return;
-          }
-
-          const existingSnapshot = await db.collection("whitelist").get();
-          let deleteBatch = db.batch();
-          let delCount = 0;
-          existingSnapshot.forEach(doc => {
-            deleteBatch.delete(doc.ref);
-            delCount++;
-            if (delCount === 400) {
-              deleteBatch.commit();
-              deleteBatch = db.batch();
-              delCount = 0;
-            }
-          });
-          if (delCount > 0) await deleteBatch.commit();
-
-          let writeBatch = db.batch();
-          let writeCount = 0;
-
-          for (const item of parsedIds) {
-            const docRef = db.collection("whitelist").doc(item.clean);
-            writeBatch.set(docRef, {
-              displayId: item.raw,
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            writeCount++;
-            if (writeCount === 400) {
-              await writeBatch.commit();
-              writeBatch = db.batch();
-              writeCount = 0;
-            }
-          }
-          if (writeCount > 0) await writeBatch.commit();
-
-          alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedIds.length} IDs uploaded.`);
-          fileInput.value = "";
-        } catch (err) {
-          alert("Error processing whitelist file: " + err.message);
-          fileInput.value = "";
+        if(!matchedPayslip) {
+          errorMsg.innerText = `NO PAYSLIP FOUND FOR ${month} ${day}, ${year}. PLEASE CHECK THE DATE.`;
+          errorMsg.style.display = "block";
+          return;
         }
+
+        const p = matchedPayslip;
+
+        /* Header Info */
+        document.getElementById("pA1").innerText = p.company || "";
+        document.getElementById("pA2").innerText = p.client || "";
+        document.getElementById("pA3").innerText = p.payrollDate || "";
+        document.getElementById("pA4").innerText = p.payrollPeriod || "";
+        document.getElementById("pF").innerText = p.empId || "";
+        document.getElementById("pG").innerText = p.empName || "";
+
+        /* STRICT COLUMN MAPPING (AQ, AR, AS, etc.) with robust fallback */
+        const aqVal = parseFloat(String(p.AQ ?? p.pAQ ?? "0").replace(/,/g, '')) || 0;
+        const arVal = parseFloat(String(p.AR ?? p.pAR ?? "0").replace(/,/g, '')) || 0;
+        let asVal = parseFloat(String(p.AS ?? p.pAS ?? "0").replace(/,/g, '')) || 0;
+
+        if (aqVal > 0 && arVal > 0) {
+          asVal = aqVal * arVal;
+        }
+
+        document.getElementById("pAQ").innerText = formatCount(aqVal);
+        document.getElementById("pAS").innerText = formatVal(asVal);
+
+        /* 2. REG OT */
+        document.getElementById("pAV").innerText = formatCount(p.AV ?? p.pAV);
+        document.getElementById("pAW").innerText = formatVal(p.AW ?? p.pAW);
+
+        /* 3. NP */
+        document.getElementById("pAZ").innerText = formatCount(p.AZ ?? p.pAZ);
+        document.getElementById("pBA").innerText = formatVal(p.BA ?? p.pBA);
+
+        /* 4. REG OT NP */
+        document.getElementById("pBB").innerText = formatCount(p.BB ?? p.pBB);
+        document.getElementById("pBC").innerText = formatVal(p.BC ?? p.pBC);
+
+        /* 5. REGULAR HOLIDAY PAY */
+        document.getElementById("pBD").innerText = formatCount(p.BD ?? p.pBD);
+        document.getElementById("pBE").innerText = formatVal(p.BE ?? p.pBE);
+
+        /* 6. REGULAR HOLIDAY DUTY */
+        document.getElementById("pBF").innerText = formatCount(p.BF ?? p.pBF);
+        document.getElementById("pBG").innerText = formatVal(p.BG ?? p.pBG);
+
+        /* 7. REGULAR HOLIDAY OT */
+        document.getElementById("pBH").innerText = formatCount(p.BH ?? p.pBH);
+        document.getElementById("pBI").innerText = formatVal(p.BI ?? p.pBI);
+
+        /* 8. REGULAR HOLIDAY NP */
+        document.getElementById("pBJ").innerText = formatCount(p.BJ ?? p.pBJ);
+        document.getElementById("pBK").innerText = formatVal(p.BK ?? p.pBK);
+
+        /* 9. SPECIAL HOLIDAY DUTY */
+        document.getElementById("pBL").innerText = formatCount(p.BL ?? p.pBL);
+        document.getElementById("pBM").innerText = formatVal(p.BM ?? p.pBM);
+
+        /* 10. SPECIAL HOLIDAY OT */
+        document.getElementById("pBN").innerText = formatCount(p.BN ?? p.pBN);
+        document.getElementById("pBO").innerText = formatVal(p.BO ?? p.pBO);
+
+        /* 11. SPECIAL HOLIDAY NP */
+        document.getElementById("pBP").innerText = formatCount(p.BP ?? p.pBP);
+        document.getElementById("pBQ").innerText = formatVal(p.BQ ?? p.pBQ);
+
+        /* 12. SPECIAL HOLIDAY OT NP */
+        document.getElementById("pBR").innerText = formatCount(p.BR ?? p.pBR);
+        document.getElementById("pBS").innerText = formatVal(p.BS ?? p.pBS);
+
+        /* 13. REST DAY */
+        document.getElementById("pBV").innerText = formatCount(p.BV ?? p.pBV);
+        document.getElementById("pBW").innerText = formatVal(p.BW ?? p.pBW);
+
+        /* 14. REST DAY OT */
+        document.getElementById("pBX").innerText = formatCount(p.BX ?? p.pBX);
+        document.getElementById("pBY").innerText = formatVal(p.BY ?? p.pBY);
+
+        /* 15. REST DAY NP */
+        document.getElementById("pBZ").innerText = formatCount(p.BZ ?? p.pBZ);
+        document.getElementById("pCA").innerText = formatVal(p.CA ?? p.pCA);
+
+        /* 16. REST DAY NP OT */
+        document.getElementById("pCB").innerText = formatCount(p.CB ?? p.pCB);
+        document.getElementById("pCC").innerText = formatVal(p.CC ?? p.pCC);
+
+        /* 17. LEAVE WITH PAY */
+        document.getElementById("pCT").innerText = formatCount(p.CT ?? p.pCT);
+        document.getElementById("pCU").innerText = formatVal(p.CU ?? p.pCU);
+
+        /* GROSS PAY */
+        document.getElementById("pCX").innerText = formatVal(p.CX ?? p.pCX ?? p.grossPay);
+
+        /* DEDUCTIONS */
+        document.getElementById("pDA").innerText = formatVal(p.DA ?? p.pDA);
+        document.getElementById("pDB").innerText = formatVal(p.DB ?? p.pDB);
+        document.getElementById("pDC").innerText = formatVal(p.DC ?? p.pDC);
+        document.getElementById("pDD").innerText = formatVal(p.DD ?? p.pDD);
+        document.getElementById("pDE").innerText = formatVal(p.DE ?? p.pDE);
+        document.getElementById("pDF").innerText = formatVal(p.DF ?? p.pDF);
+        document.getElementById("pDG").innerText = formatVal(p.DG ?? p.pDG);
+        document.getElementById("pDR").innerText = formatVal(p.DR ?? p.pDR);
+        document.getElementById("pDH").innerText = formatVal(p.DH ?? p.pDH);
+        document.getElementById("pDI").innerText = formatVal(p.DI ?? p.pDI);
+        document.getElementById("pDJ").innerText = formatVal(p.DJ ?? p.pDJ);
+        document.getElementById("pDK").innerText = formatVal(p.DK ?? p.pDK);
+        document.getElementById("pDO").innerText = formatVal(p.DO ?? p.pDO ?? p.totalDeduction);
+
+        /* ADJUSTMENTS & NET TAKE HOME */
+        document.getElementById("pDP").innerText = formatVal(p.DP ?? p.pDP);
+        document.getElementById("pDQ").innerText = formatVal(p.DQ ?? p.pDQ);
+        document.getElementById("pDT").innerText = formatVal(p.DT ?? p.pDT);
+        document.getElementById("pDV").innerText = formatVal(p.DV ?? p.pDV ?? p.netPay);
+
+        box.style.display = "block";
+
+      } catch (err) {
+        console.error(err);
+        errorMsg.innerText = "ERROR LOADING PAYSLIP: " + err.message;
+        errorMsg.style.display = "block";
+      }
+    }
+
+    /* SAVE PAYSLIP AS PDF */
+    function savePayslipPDF() {
+      const element = document.getElementById("payslipPrintableArea");
+      
+      const empId = document.getElementById("pF").innerText.trim() || "EMPLOYEE";
+      const clientName = document.getElementById("pA2").innerText.trim() || "CLIENT";
+      const payrollDate = document.getElementById("pA3").innerText.trim() || "DATE";
+
+      const cleanEmpId = empId.replace(/[^a-zA-Z0-9_-]/g, '');
+      const cleanClient = clientName.replace(/[^a-zA-Z0-9_-]/g, ' ');
+      const cleanDate = payrollDate.replace(/[^a-zA-Z0-9_-]/g, ' ');
+
+      const fileName = `${cleanEmpId}-${cleanClient}-${cleanDate}.pdf`.replace(/\s+/g, ' ');
+
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-      reader.readAsArrayBuffer(file);
+
+      html2pdf().set(opt).from(element).save();
     }
 
-    async function manuallyAddWhitelist() {
-      const input = prompt("Enter Employee ID to Whitelist:");
-      if (!input) return;
-
-      const rawVal = input.trim();
-      const cleaned = cleanEmpId(rawVal);
-      if (!cleaned) return alert("Invalid ID number.");
-
-      const existingDoc = await db.collection("whitelist").doc(cleaned).get();
-      if (existingDoc.exists) {
-        return alert(`REJECTED: ID Number '${rawVal}' is ALREADY present in the whitelist.`);
-      }
-
-      await db.collection("whitelist").doc(cleaned).set({
-        displayId: rawVal,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      alert(`ID '${rawVal}' successfully added to whitelist!`);
-    }
-
-    async function deleteWhitelistId(docId) {
-      if (confirm(`Remove ID '${docId}' from Whitelist?`)) {
-        await db.collection("whitelist").doc(docId).delete();
-      }
-    }
-
-    async function downloadWhitelistExcel() {
-      try {
-        const excelData = [["WHITELISTED EMPLOYEE ID"]];
-        const snapshot = await db.collection("whitelist").get();
-        snapshot.forEach(doc => {
-          excelData.push([doc.data().displayId || doc.id]);
-        });
-        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Whitelist");
-        XLSX.writeFile(workbook, "Whitelist_Export.xlsx");
-      } catch (err) {
-        alert("Error exporting whitelist: " + err.message);
-      }
-    }
-
-    function openMappingModal(clientId) {
-      currentMappingClientId = clientId;
-      const client = clientsList.find(c => c.id === clientId);
-      document.getElementById("mappingModalTitle").innerText = `Map Columns for: ${client.name}`;
-
-      const mapping = client.mapping || {};
-      document.getElementById("empIdColInput").value = mapping.empIdCol || "F";
-      document.getElementById("empNameColInput").value = mapping.empNameCol || "G";
-
-      const earnings = (mapping.earnings && mapping.earnings.length > 0) ? mapping.earnings : DEFAULT_EARNINGS;
-      const deductions = (mapping.deductions && mapping.deductions.length > 0) ? mapping.deductions : DEFAULT_DEDUCTIONS;
-      const adjustments = (mapping.adjustments && mapping.adjustments.length > 0) ? mapping.adjustments : DEFAULT_ADJUSTMENTS;
-
-      renderEarningsSection(earnings);
-      renderStandardSection("deductionsList", deductions);
-      renderStandardSection("adjustmentsList", adjustments);
-
-      document.getElementById("grossPayColInput").value = mapping.grossPayCol || "BB";
-      document.getElementById("totalDeductionsColInput").value = mapping.totalDeductionsCol || "";
-      document.getElementById("totalAdjustmentsColInput").value = mapping.totalAdjustmentsCol || "";
-      document.getElementById("netPayColInput").value = mapping.netPayCol || "BD";
-
-      document.getElementById("mappingModal").style.display = "flex";
-    }
-
-    function renderEarningsSection(items) {
-      const container = document.getElementById("earningsList");
-      container.innerHTML = "";
-      items.forEach(item => {
-        addEarningsRow(item.label, item.unit, item.qtyCol, item.amtCol);
-      });
-    }
-
-    function addEarningsRow(label = "", unit = "HOURS", qtyCol = "", amtCol = "") {
-      const container = document.getElementById("earningsList");
-      const row = document.createElement("div");
-      row.className = "mapping-row";
-      row.draggable = true;
-
-      row.innerHTML = `
-        <span class="drag-handle" title="Drag to reorder">☰</span>
-        <input type="text" class="map-input-name" placeholder="TYPE NAME" value="${label}">
-        <input type="text" class="map-input-unit" placeholder="UNIT" value="${unit}">
-        <input type="text" class="map-input-col map-input-qty" placeholder="QTY COL" value="${qtyCol}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="AMT COL" value="${amtCol}">
-        <button class="btn-icon-danger" onclick="removeMappingRow(this)">×</button>
-      `;
-      setupDragAndDrop(row, container);
-      container.appendChild(row);
-    }
-
-    function renderStandardSection(containerId, items) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = "";
-      items.forEach(item => {
-        addStandardRow(containerId, item.label, item.unit, item.col);
-      });
-    }
-
-    function addStandardRow(containerId, label = "", unit = "AMOUNT", col = "") {
-      const container = document.getElementById(containerId);
-      const row = document.createElement("div");
-      row.className = "mapping-row";
-      row.draggable = true;
-
-      row.innerHTML = `
-        <span class="drag-handle" title="Drag to reorder">☰</span>
-        <input type="text" class="map-input-name" placeholder="ITEM NAME" value="${label}" style="flex: 2.2;">
-        <input type="text" class="map-input-unit" placeholder="UNIT" value="${unit}">
-        <input type="text" class="map-input-col map-input-amt" placeholder="COL OR FORMULA" value="${col}">
-        <button class="btn-icon-danger" onclick="removeMappingRow(this)">×</button>
-      `;
-      setupDragAndDrop(row, container);
-      container.appendChild(row);
-    }
-
-    function setupDragAndDrop(row, container) {
-      row.addEventListener("dragstart", (e) => {
-        draggedElement = row;
-        row.classList.add("dragging");
-      });
-      row.addEventListener("dragend", () => {
-        draggedElement = null;
-        row.classList.remove("dragging");
-      });
-      container.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
-        if (draggedElement && draggedElement.parentElement === container) {
-          if (afterElement == null) container.appendChild(draggedElement);
-          else container.insertBefore(draggedElement, afterElement);
-        }
-      });
-    }
-
-    function getDragAfterElement(container, y) {
-      const draggableElements = [...container.querySelectorAll(".mapping-row:not(.dragging)")];
-      return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-        else return closest;
-      }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    function removeMappingRow(btn) { btn.closest(".mapping-row").remove(); }
-    function closeMappingModal() {
-      document.getElementById("mappingModal").style.display = "none";
-      currentMappingClientId = null;
-    }
-
-    function extractEarningsData() {
-      const rows = document.querySelectorAll("#earningsList .mapping-row");
-      const items = [];
-      rows.forEach(r => {
-        const label = r.querySelector(".map-input-name").value.trim().toUpperCase();
-        const unit = r.querySelector(".map-input-unit").value.trim().toUpperCase();
-        const qtyCol = r.querySelector(".map-input-qty").value.trim().toUpperCase();
-        const amtCol = r.querySelector(".map-input-amt").value.trim().toUpperCase();
-        if (label || qtyCol || amtCol) items.push({ label, unit, qtyCol, amtCol });
-      });
-      return items;
-    }
-
-    function extractStandardData(containerId) {
-      const rows = document.querySelectorAll(`#${containerId} .mapping-row`);
-      const items = [];
-      rows.forEach(r => {
-        const label = r.querySelector(".map-input-name").value.trim().toUpperCase();
-        const unit = r.querySelector(".map-input-unit").value.trim().toUpperCase();
-        const col = r.querySelector(".map-input-amt").value.trim().toUpperCase();
-        if (label || col) items.push({ label, unit, col });
-      });
-      return items;
-    }
-
-    async function saveClientMapping() {
-      if (!currentMappingClientId) return;
-      const mappingData = {
-        empIdCol: document.getElementById("empIdColInput").value.trim().toUpperCase(),
-        empNameCol: document.getElementById("empNameColInput").value.trim().toUpperCase(),
-        earnings: extractEarningsData(),
-        grossPayCol: document.getElementById("grossPayColInput").value.trim().toUpperCase(),
-        deductions: extractStandardData("deductionsList"),
-        totalDeductionsCol: document.getElementById("totalDeductionsColInput").value.trim().toUpperCase(),
-        adjustments: extractStandardData("adjustmentsList"),
-        totalAdjustmentsCol: document.getElementById("totalAdjustmentsColInput").value.trim().toUpperCase(),
-        netPayCol: document.getElementById("netPayColInput").value.trim().toUpperCase(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      try {
-        await db.collection("clients").doc(currentMappingClientId).set({ mapping: mappingData }, { merge: true });
-        alert("Custom Column Mapping saved successfully!");
-        closeMappingModal();
-      } catch (err) {
-        alert("Error saving mapping: " + err.message);
-      }
-    }
-
-    function openPayslipPreview() {
-      const client = clientsList.find(c => c.id === currentMappingClientId);
-      document.getElementById("prevClientTitle").innerText = client ? client.name : "CLIENT";
-      const pDateInput = document.getElementById("authPayrollDate").value;
-      const pFromInput = document.getElementById("authPeriodFrom").value;
-      const pToInput = document.getElementById("authPeriodTo").value;
-
-      document.getElementById("prevPayrollDateTitle").innerText = pDateInput ? formatDateDisplay(pDateInput) : "JULY 15, 2026";
-      document.getElementById("prevPayrollPeriodTitle").innerText = (pFromInput && pToInput) ? `${formatDateDisplay(pFromInput)} - ${formatDateDisplay(pToInput)}` : "JUNE 26 - JULY 10, 2026";
-
-      document.getElementById("previewModal").style.display = "flex";
-    }
-
-    function closePayslipPreview() { document.getElementById("previewModal").style.display = "none"; }
-
-    async function verifyAuthorizationAndUpload() {
-      const clientId = document.getElementById("authClientSelect").value;
-      const payrollDate = document.getElementById("authPayrollDate").value;
-      const periodFrom = document.getElementById("authPeriodFrom").value;
-      const periodTo = document.getElementById("authPeriodTo").value;
-      const rawEmpId = document.getElementById("authIdInput").value.trim();
-      const pin = document.getElementById("authPinInput").value.trim();
-
-      let missingFields = [];
-      if (!clientId) missingFields.push("Select Company / Client");
-      if (!payrollDate) missingFields.push("Payroll Date");
-      if (!periodFrom) missingFields.push("Payroll Period (From)");
-      if (!periodTo) missingFields.push("Payroll Period (Up To)");
-      if (!rawEmpId) missingFields.push("Employee ID");
-      if (!pin) missingFields.push("PIN");
-
-      if (missingFields.length > 0) {
-        alert("UPLOAD CANNOT PROCEED!\nMissing required fields:\n• " + missingFields.join("\n• "));
-        return;
-      }
-
-      try {
-        const cleanedId = cleanEmpId(rawEmpId);
-        const empDoc = await db.collection("employees").doc(cleanedId).get();
-        if (!empDoc.exists) return alert("AUTHORIZATION FAILED: Invalid Employee ID.");
-
-        const empData = empDoc.data();
-        if (empData.pin !== pin) return alert("AUTHORIZATION FAILED: Incorrect PIN.");
-        if (empData.canOverride !== true) return alert("ACCESS DENIED: You do not have Upload/Override permissions.");
-
-        const clientObj = clientsList.find(c => c.id === clientId);
-        activeAuthorizedEmp = { 
-          id: cleanedId, 
-          clientId: clientId,
-          clientName: clientObj ? clientObj.name : "CLIENT",
-          payrollDate: payrollDate,
-          payrollDateStr: formatDateDisplay(payrollDate),
-          periodFrom: periodFrom,
-          periodTo: periodTo,
-          payrollPeriodStr: `${formatDateDisplay(periodFrom)} - ${formatDateDisplay(periodTo)}`
-        };
-
-        document.getElementById("publicPayrollFileInput").click();
-      } catch (err) {
-        alert("Verification error: " + err.message);
-      }
-    }
-
-    async function handlePublicPayrollUpload() {
-      const fileInput = document.getElementById("publicPayrollFileInput");
-      const file = fileInput.files[0];
-      if (!file || !activeAuthorizedEmp) return;
-
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        try {
-          const arrayBuffer = e.target.result;
-          const data = new Uint8Array(arrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array', raw: false });
-
-          // REQUIREMENT 1: Case-insensitive check for sheet named "Payroll" or payroll
-          const payrollSheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === "payroll");
-          if (!payrollSheetName) {
-            alert("SECURITY REJECTED: Worksheet named 'Payroll' (case-insensitive) not found in file.");
-            fileInput.value = "";
-            return;
-          }
-
-          const worksheet = workbook.Sheets[payrollSheetName];
-
-          const a1 = String(getCellValue(worksheet, "A", 1) || "").trim();
-          const a2 = String(getCellValue(worksheet, "A", 2) || "").trim();
-          const a3 = String(getCellValue(worksheet, "A", 3) || "").trim();
-          const a4 = String(getCellValue(worksheet, "A", 4) || "").trim();
-
-          if (!a1 || !a2 || !a3 || !a4) {
-            alert("SECURITY REJECTED: Cells A1, A2, A3, and A4 must contain text data.");
-            fileInput.value = "";
-            return;
-          }
-
-          const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
-          const batchDoc = await db.collection("payroll_batches").doc(batchId).get();
-
-          pendingPayrollWorksheet = worksheet;
-
-          if (batchDoc.exists) {
-            document.getElementById("dupClientText").innerText = activeAuthorizedEmp.clientName;
-            document.getElementById("dupDateText").innerText = activeAuthorizedEmp.payrollDateStr;
-            document.getElementById("overrideEmpIdInput").value = activeAuthorizedEmp.id;
-            document.getElementById("overridePinInput").value = "";
-            document.getElementById("overrideAuthModal").style.display = "flex";
-            return;
-          }
-
-          await executePayrollProcessing(worksheet, "UPLOAD", activeAuthorizedEmp.id);
-        } catch (err) {
-          alert("Error processing Excel file: " + err.message);
-          fileInput.value = "";
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    function cancelOverrideUpload() {
-      pendingPayrollWorksheet = null;
-      document.getElementById("overrideAuthModal").style.display = "none";
-      document.getElementById("publicPayrollFileInput").value = "";
-    }
-
-    async function verifyAndExecuteOverride() {
-      const authId = document.getElementById("overrideEmpIdInput").value.trim();
-      const authPin = document.getElementById("overridePinInput").value.trim();
-
-      if (!authId || !authPin) return alert("Please provide Authorized Employee ID and PIN.");
-
-      try {
-        const cleanedId = cleanEmpId(authId);
-        const empDoc = await db.collection("employees").doc(cleanedId).get();
-        if (!empDoc.exists) return alert("REJECTED: Employee ID not found.");
-
-        const empData = empDoc.data();
-        if (empData.pin !== authPin) return alert("REJECTED: Incorrect PIN.");
-        if (empData.canOverride !== true) return alert("REJECTED: This ID does not have Override permissions.");
-
-        document.getElementById("overrideAuthModal").style.display = "none";
-        await executePayrollProcessing(pendingPayrollWorksheet, "OVERRIDE", cleanedId);
-        pendingPayrollWorksheet = null;
-      } catch (err) {
-        alert("Authorization Error: " + err.message);
-      }
-    }
-
-    async function executePayrollProcessing(worksheet, actionType, uploaderId) {
-      const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
-      const mapping = (clientObj && clientObj.mapping) ? clientObj.mapping : {};
-
-      const empIdCol = mapping.empIdCol || "F";
-      const empNameCol = mapping.empNameCol || "G";
-      const earningsSchema = mapping.earnings || DEFAULT_EARNINGS;
-      const deductionsSchema = mapping.deductions || DEFAULT_DEDUCTIONS;
-      const totalDeductionsCol = mapping.totalDeductionsCol || "";
-      const adjustmentsSchema = mapping.adjustments || DEFAULT_ADJUSTMENTS;
-      const totalAdjustmentsCol = mapping.totalAdjustmentsCol || "";
-      const grossPayCol = mapping.grossPayCol || "BB";
-      const netPayCol = mapping.netPayCol || "BD";
-
-      const range = XLSX.utils.decode_range(worksheet['!ref']);
-      const totalRows = range.e.r + 1;
-
-      let batch = db.batch();
-      let count = 0;
-      let totalUploaded = 0;
-
-      for (let r = 8; r <= totalRows; r++) {
-        const empName = String(getCellValue(worksheet, empNameCol, r) || getCellValue(worksheet, "G", r) || "").trim();
-        if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
-
-        const rawId = String(getCellValue(worksheet, empIdCol, r) || getCellValue(worksheet, "F", r) || getCellValue(worksheet, "A", r) || "").trim();
-        const cleanedId = cleanEmpId(rawId);
-        if (!cleanedId) continue;
-
-        const earningsItems = earningsSchema.map(item => ({
-          label: item.label,
-          unit: item.unit,
-          qtyCol: item.qtyCol,
-          amtCol: item.amtCol,
-          qtyVal: evaluateFormulaOrCol(item.qtyCol, worksheet, r),
-          amtVal: evaluateFormulaOrCol(item.amtCol, worksheet, r)
-        }));
-
-        const deductionItems = deductionsSchema.map(item => ({
-          label: item.label,
-          unit: item.unit,
-          col: item.col,
-          val: evaluateFormulaOrCol(item.col, worksheet, r)
-        }));
-
-        let calculatedDeductions = 0;
-        deductionItems.forEach(d => calculatedDeductions += d.val);
-        const finalTotalDeductions = totalDeductionsCol ? evaluateFormulaOrCol(totalDeductionsCol, worksheet, r) : calculatedDeductions;
-
-        let calculatedAdjustments = 0;
-        const adjustmentItems = adjustmentsSchema.map(item => {
-          const val = evaluateFormulaOrCol(item.col, worksheet, r);
-          calculatedAdjustments += val;
-          return { label: item.label, unit: item.unit, col: item.col, val: val };
-        });
-        const finalTotalAdjustments = totalAdjustmentsCol ? evaluateFormulaOrCol(totalAdjustmentsCol, worksheet, r) : calculatedAdjustments;
-
-        const finalGrossPay = evaluateFormulaOrCol(grossPayCol, worksheet, r);
-        const finalNetPay = evaluateFormulaOrCol(netPayCol, worksheet, r);
-
-        const payslipPayload = {
-          empId: cleanedId,
-          rawEmpId: rawId,
-          empName: empName,
-          agencyName: "INT'L. MANPOWER ESSENTIALS, INC.",
-          clientName: activeAuthorizedEmp.clientName,
-          payrollDateRaw: activeAuthorizedEmp.payrollDate,
-          payrollDateStr: activeAuthorizedEmp.payrollDateStr,
-          payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
-          payrollPeriodTo: activeAuthorizedEmp.periodTo,
-          payrollPeriodStr: activeAuthorizedEmp.payrollPeriodStr,
-          earningsItems: earningsItems,
-          deductionItems: deductionItems,
-          adjustmentItems: adjustmentItems,
-          grossPay: finalGrossPay,
-          totalDeductions: finalTotalDeductions,
-          totalAdjustments: finalTotalAdjustments,
-          netPay: finalNetPay,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        const docRef = db.collection("payslips").doc(`${cleanedId}_${activeAuthorizedEmp.clientId}_${activeAuthorizedEmp.payrollDate}`);
-        batch.set(docRef, payslipPayload, { merge: true });
-
-        count++;
-        totalUploaded++;
-
-        if (count === 400) {
-          await batch.commit();
-          batch = db.batch();
-          count = 0;
-        }
-      }
-
-      const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
-      const batchRef = db.collection("payroll_batches").doc(batchId);
-      batch.set(batchRef, {
-        client: activeAuthorizedEmp.clientName,
-        payrollDate: activeAuthorizedEmp.payrollDateStr,
-        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
-        uploadedBy: uploaderId,
-        uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      count++;
-
-      // REQUIREMENT 5: Removed excel file base64 storage in history log to fix file size issue
-      const historyRef = db.collection("payroll_history").doc();
-      batch.set(historyRef, {
-        uploaderId: uploaderId,
-        clientName: activeAuthorizedEmp.clientName,
-        payrollDate: activeAuthorizedEmp.payrollDateStr,
-        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
-        status: actionType,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      count++;
-
-      if (count > 0) await batch.commit();
-
-      alert(`SUCCESS: Processed and saved ${totalUploaded} employee payslips.\nAction recorded as [${actionType}].`);
-      document.getElementById("publicPayrollFileInput").value = "";
-      showLandingScreen();
-    }
-
-    function openHistoryModal() {
-      document.getElementById("historyModal").style.display = "flex";
-      loadHistoryLogs();
-    }
-
-    function closeHistoryModal() { document.getElementById("historyModal").style.display = "none"; }
-
-    function loadHistoryLogs() {
-      const tbody = document.getElementById("historyTableBody");
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Loading history...</td></tr>`;
-
-      db.collection("payroll_history")
-        .orderBy("timestamp", "desc")
-        .get()
-        .then(snapshot => {
-          tbody.innerHTML = "";
-          if (snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #718096;">No history recorded yet.</td></tr>`;
-            return;
-          }
-
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            const dateStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : "N/A";
-            const badgeClass = data.status === "OVERRIDE" ? "status-override" : "status-upload";
-            const displayStatus = data.status === "OVERRIDE" ? "OVERRIDDEN" : "UPLOADED";
-
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-              <td><strong>${data.uploaderId || "---"}</strong></td>
-              <td>${data.clientName || "---"}</td>
-              <td>${data.payrollDate || "---"}</td>
-              <td>${data.payrollPeriod || "---"}</td>
-              <td><span class="status-badge ${badgeClass}">${displayStatus}</span></td>
-              <td>${dateStr}</td>
-            `;
-            tbody.appendChild(tr);
-          });
-        })
-        .catch(err => {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Error loading history: ${err.message}</td></tr>`;
-        });
-    }
-
-    function triggerExcelUpload() { document.getElementById("excelFileInput").click(); }
-
-    async function handleFileSelected() {
-      const fileInput = document.getElementById("excelFileInput");
-      const file = fileInput.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', raw: false });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-
-          const cellA1 = String(getCellValue(worksheet, "A", 1) || "").trim().toUpperCase();
-          const cellB1 = String(getCellValue(worksheet, "B", 1) || "").trim().toUpperCase();
-
-          if (cellA1 !== "ID" || cellB1 !== "PIN") {
-            alert("SECURITY REJECTED: Header A1 must be 'ID' and B1 must be 'PIN'.");
-            fileInput.value = "";
-            return;
-          }
-
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-          let batch = db.batch();
-          let count = 0;
-          let totalUploaded = 0;
-          let invalidPins = 0;
-
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length < 2) continue;
-
-            const rawId = String(row[0] || "").trim();
-            const rawPin = String(row[1] || "").trim();
-            const cleanedId = cleanEmpId(rawId);
-
-            if (!cleanedId || !rawPin) continue;
-
-            if (!/^\d{6}$/.test(rawPin)) {
-              invalidPins++;
-              continue;
-            }
-
-            const docRef = db.collection("employees").doc(cleanedId);
-            batch.set(docRef, {
-              empId: cleanedId,
-              displayId: rawId,
-              pin: rawPin,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
-            count++;
-            totalUploaded++;
-
-            if (count === 400) {
-              await batch.commit();
-              batch = db.batch();
-              count = 0;
-            }
-          }
-
-          if (count > 0) await batch.commit();
-
-          let msg = `SUCCESS: Uploaded ${totalUploaded} employee records.`;
-          if (invalidPins > 0) msg += `\n(${invalidPins} skipped: PIN was not 6 digits)`;
-          alert(msg);
-          fileInput.value = "";
-        } catch (err) {
-          alert("Error processing file: " + err.message);
-          fileInput.value = "";
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    async function downloadEmployeeExcel() {
-      try {
-        const excelData = [["ID", "PIN"]];
-        const snapshot = await db.collection("employees").get();
-        snapshot.forEach(doc => {
-          excelData.push([doc.data().displayId || doc.id, String(doc.data().pin || "")]);
-        });
-        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
-        XLSX.writeFile(workbook, "Employee_Credentials.xlsx");
-      } catch (err) {
-        alert("Error: " + err.message);
-      }
-    }
-
-    function loadEmployees() {
-      db.collection("employees").onSnapshot(snapshot => {
-        allEmployees = [];
-        snapshot.forEach(doc => allEmployees.push({ empId: doc.id, ...doc.data() }));
-        renderEmployees(allEmployees);
-      });
-    }
-
-    function renderEmployees(list) {
-      const tbody = document.getElementById("employeeBody");
-      tbody.innerHTML = "";
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #718096;">No employees found.</td></tr>`;
-        return;
-      }
-      list.forEach(emp => {
-        const tr = document.createElement("tr");
-        const canOverride = emp.canOverride === true;
-        const displayId = emp.displayId || emp.empId;
-        tr.innerHTML = `
-          <td><strong>${displayId}</strong></td>
-          <td>${emp.empName || "---"}</td>
-          <td><span class="pin-badge">${emp.pin || "NO PIN"}</span></td>
-          <td>
-            <input type="checkbox" ${canOverride ? "checked" : ""} onchange="toggleOverridePermission('${emp.empId}', this.checked)">
-            Can Upload / Override
-          </td>
-          <td style="text-align: right;">
-            <button class="btn-dark" onclick="manualEditPin('${emp.empId}')">Edit PIN</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function toggleOverridePermission(empId, isAllowed) {
-      await db.collection("employees").doc(empId).set({ canOverride: isAllowed }, { merge: true });
-    }
-
-    async function manualEditPin(empId) {
-      const pin = prompt(`Enter new PIN for ID ${empId}:`);
-      if (pin && /^\d{6}$/.test(pin)) {
-        await db.collection("employees").doc(empId).set({ pin: pin }, { merge: true });
-      } else if (pin) {
-        alert("PIN must be 6 digits.");
-      }
-    }
-
-    function filterAllTables() {
-      const q = cleanEmpId(document.getElementById("searchInput").value);
-      renderEmployees(allEmployees.filter(e => {
-        return cleanEmpId(e.empId).includes(q) || cleanEmpId(e.displayId || '').includes(q) || (e.empName || "").toUpperCase().includes(q);
-      }));
+    /* PRINT PAYSLIP */
+    function printPayslip() {
+      window.print();
     }
   </script>
 </body>
