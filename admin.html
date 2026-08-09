@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Payslip Upload & Sync Portal</title>
+  <title>Employee Payslip Portal</title>
   <style>
     * { 
       box-sizing: border-box; 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
     }
     body { 
-      background-color: #f1f5f9; 
+      background-color: #f8fafc; 
       margin: 0;
       padding: 40px 20px; 
       display: flex; 
@@ -20,22 +20,51 @@
     }
     .container { 
       width: 100%; 
-      max-width: 700px; 
+      max-width: 620px; 
       background: #ffffff; 
       padding: 30px; 
       border-radius: 10px; 
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); 
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); 
+      position: relative; 
     }
-    h2 { 
-      margin-top: 0; 
+    
+    /* HEADER */
+    .portal-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 24px; 
+    }
+    .portal-header h2 { 
+      margin: 0; 
+      font-size: 20px; 
+      font-weight: 800; 
       color: #1e293b; 
-      font-size: 22px; 
+      letter-spacing: -0.3px;
+    }
+    .btn-register-link { 
+      background: #27a365; 
+      color: white; 
+      border: none; 
+      padding: 8px 16px; 
+      border-radius: 6px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      font-size: 12px; 
       text-transform: uppercase; 
-      border-bottom: 2px solid #e2e8f0; 
-      padding-bottom: 12px; 
+      letter-spacing: 0.3px;
+      transition: background 0.2s;
+    }
+    .btn-register-link:hover { 
+      background: #218854; 
+    }
+
+    /* FORM STYLING */
+    .login-section { 
+      padding-bottom: 5px; 
     }
     .input-group { 
-      margin-bottom: 20px; 
+      margin-bottom: 18px; 
     }
     label { 
       font-weight: 700; 
@@ -43,103 +72,329 @@
       margin-bottom: 8px; 
       color: #475569; 
       font-size: 13px; 
-      text-transform: uppercase; 
+      letter-spacing: 0.2px;
     }
-    input[type="file"], input[type="text"], select { 
+    input, select { 
       width: 100%; 
-      padding: 12px; 
+      padding: 11px 14px; 
       border: 1px solid #cbd5e1; 
       border-radius: 6px; 
       font-size: 14px; 
-      background: #fff; 
+      background: #ffffff; 
       color: #1e293b;
       outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     input:focus, select:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
-    .row-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
+    input::placeholder, select {
+      color: #94a3b8;
     }
-    .btn-sync { 
+    
+    /* DATE GRID LAYOUT */
+    .date-grid { 
+      display: grid; 
+      grid-template-columns: 2.2fr 1fr 1fr; 
+      gap: 10px; 
+    }
+    
+    .btn-primary { 
       width: 100%; 
-      padding: 14px; 
-      background: #2563eb; 
+      padding: 12px; 
+      background: #3182ce; 
       color: white; 
       border: none; 
       border-radius: 6px; 
       font-size: 15px; 
       font-weight: 700; 
       cursor: pointer; 
+      margin-top: 6px; 
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { 
+      background: #2b6cb0; 
+    }
+    
+    /* PAYSLIP DISPLAY STYLES */
+    .payslip-box { 
+      display: none; 
+      margin-top: 25px; 
+      border: 1px solid #cbd5e0; 
+      border-radius: 8px; 
+      padding: 25px; 
+      background: #fff; 
+    }
+    
+    .payslip-title { 
+      text-align: center; 
+      border-bottom: 2px dashed #cbd5e0; 
+      padding-bottom: 15px; 
+      margin-bottom: 20px; 
+    }
+    .payslip-title h2 { margin: 0 0 5px 0; color: #1a202c; text-transform: uppercase; font-size: 20px; }
+    .payslip-title h3 { margin: 0 0 5px 0; color: #4a5568; text-transform: uppercase; font-size: 16px; }
+    .payslip-title p { margin: 3px 0; color: #2d3748; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+    
+    .employee-info { border-bottom: 2px dashed #cbd5e0; padding-bottom: 15px; margin-bottom: 20px; }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; text-transform: uppercase; }
+    .info-row strong { color: #4a5568; }
+
+    .section-header { background: #edf2f7; padding: 8px 10px; font-weight: bold; color: #2d3748; text-transform: uppercase; margin-top: 15px; border-radius: 4px; font-size: 14px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 15px; }
+    .table th { padding: 8px 10px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #718096; text-transform: uppercase; }
+    .table td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; font-size: 13px; text-transform: uppercase; }
+    
+    .text-left { text-align: left; }
+    .text-center { text-align: center; }
+    .amount { text-align: right; font-weight: bold; }
+    
+    .highlight-row { background: #ebf8ff; font-weight: bold; color: #2b6cb0; }
+    .net-pay-row { background: #c6f6d5; font-weight: bold; color: #22543d; font-size: 15px; }
+
+    /* ACTION BUTTONS (SAVE & PRINT) */
+    .payslip-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .btn-save {
+      flex: 1;
+      padding: 12px;
+      background: #2b6cb0;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
       text-transform: uppercase;
       transition: background 0.2s;
     }
-    .btn-sync:hover { 
-      background: #1d4ed8; 
+    .btn-save:hover { background: #2c5282; }
+    .btn-print {
+      flex: 1;
+      padding: 12px;
+      background: #4a5568;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s;
     }
-    #logBox { 
-      margin-top: 20px; 
-      background: #0f172a; 
-      color: #38ef7d; 
-      padding: 15px; 
-      border-radius: 6px; 
-      font-family: monospace; 
-      font-size: 13px; 
-      max-height: 250px; 
-      overflow-y: auto; 
-      display: none; 
+    .btn-print:hover { background: #2d3748; }
+
+    .error-msg { color: #e53e3e; font-weight: bold; text-align: center; margin-top: 15px; display: none; font-size: 14px; }
+
+    /* MODAL STYLES FOR REGISTER ID */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .modal-header h3 { margin: 0; color: #2d3748; }
+    .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #a0aec0; }
+    .close-btn:hover { color: #2d3748; }
+
+    /* PRINT MEDIA STYLES */
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      .portal-header, .login-section, .payslip-actions, .modal-overlay { display: none !important; }
+      .payslip-box { display: block !important; border: none; padding: 0; margin-top: 0; }
     }
   </style>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <!-- SheetJS Library for Excel Parsing -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- HTML2PDF LIBRARY FOR PDF GENERATION -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
   <div class="container">
-    <h2>Admin Payslip Excel Sync</h2>
-
-    <div class="input-group">
-      <label>Select Payroll Excel File (.xlsx)</label>
-      <input type="file" id="excelFile" accept=".xlsx, .xls">
+    <div class="portal-header">
+      <h2>EMPLOYEE PAYSLIP PORTAL</h2>
+      <button class="btn-register-link" onclick="openRegisterModal()">REGISTER ID</button>
     </div>
 
-    <div class="row-grid">
+    <div class="login-section">
       <div class="input-group">
-        <label>Company Name</label>
-        <input type="text" id="companyName" value="INT'L. MANPOWER ESSENTIALS, INC.">
+        <label>EMPLOYEE ID NUMBER</label>
+        <input type="text" id="empId" placeholder="ENTER ID NUMBER (e.g. IS058 or IS-058)">
       </div>
+      
       <div class="input-group">
-        <label>Client Name</label>
-        <input type="text" id="clientName" value="TECEDIA CEBU INC.">
+        <label>PIN / PASSWORD</label>
+        <input type="password" id="pin" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
       </div>
+
+      <div class="input-group">
+        <label>PAYROLL DATE</label>
+        <div class="date-grid">
+          <select id="pMonth">
+            <option value="">SELECT MONTH</option>
+            <option value="JANUARY">JANUARY</option>
+            <option value="FEBRUARY">FEBRUARY</option>
+            <option value="MARCH">MARCH</option>
+            <option value="APRIL">APRIL</option>
+            <option value="MAY">MAY</option>
+            <option value="JUNE">JUNE</option>
+            <option value="JULY">JULY</option>
+            <option value="AUGUST">AUGUST</option>
+            <option value="SEPTEMBER">SEPTEMBER</option>
+            <option value="OCTOBER">OCTOBER</option>
+            <option value="NOVEMBER">NOVEMBER</option>
+            <option value="DECEMBER">DECEMBER</option>
+          </select>
+          <input type="number" id="pDay" placeholder="DAY (e.g. 15)" min="1" max="31">
+          <input type="number" id="pYear" placeholder="YEAR (e.g. 2026)">
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="viewPayslip()">VIEW PAYSLIP</button>
+      <div id="errorMsg" class="error-msg"></div>
     </div>
 
-    <div class="row-grid">
-      <div class="input-group">
-        <label>Payroll Date</label>
-        <input type="text" id="payrollDate" value="JULY 15, 2026">
+    <!-- PAYSLIP DISPLAY CONTAINER -->
+    <div id="payslipBox" class="payslip-box">
+      <div id="payslipPrintableArea">
+        <div class="payslip-title">
+          <h2 id="pA1">---</h2>
+          <h3 id="pA2">---</h3>
+          <p id="pA3">---</p>
+          <p id="pA4">---</p>
+        </div>
+
+        <div class="employee-info">
+          <div class="info-row">
+            <strong>EMPLOYEE ID NUMBER:</strong>
+            <span id="pF">---</span>
+          </div>
+          <div class="info-row">
+            <strong>EMPLOYEE NAME:</strong>
+            <span id="pG">---</span>
+          </div>
+        </div>
+
+        <!-- EARNINGS & HOURS SECTION -->
+        <div class="section-header">EARNINGS & HOURS</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-left" style="width: 50%;">TYPE</th>
+              <th class="text-center" style="width: 25%;">HOURS / DAYS</th>
+              <th class="amount" style="width: 25%;">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="text-left">REGULAR DAYS</td><td class="text-center" id="pAQ">0</td><td class="amount" id="pAS">0.00</td></tr>
+            <tr><td class="text-left">REG OT</td><td class="text-center" id="pAV">0</td><td class="amount" id="pAW">0.00</td></tr>
+            <tr><td class="text-left">NP</td><td class="text-center" id="pAZ">0</td><td class="amount" id="pBA">0.00</td></tr>
+            <tr><td class="text-left">REG OT NP</td><td class="text-center" id="pBB">0</td><td class="amount" id="pBC">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY PAY</td><td class="text-center" id="pBD">0</td><td class="amount" id="pBE">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY DUTY</td><td class="text-center" id="pBF">0</td><td class="amount" id="pBG">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY OT</td><td class="text-center" id="pBH">0</td><td class="amount" id="pBI">0.00</td></tr>
+            <tr><td class="text-left">REGULAR HOLIDAY NP</td><td class="text-center" id="pBJ">0</td><td class="amount" id="pBK">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY DUTY</td><td class="text-center" id="pBL">0</td><td class="amount" id="pBM">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY OT</td><td class="text-center" id="pBN">0</td><td class="amount" id="pBO">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY NP</td><td class="text-center" id="pBP">0</td><td class="amount" id="pBQ">0.00</td></tr>
+            <tr><td class="text-left">SPECIAL HOLIDAY OT NP</td><td class="text-center" id="pBR">0</td><td class="amount" id="pBS">0.00</td></tr>
+            <tr><td class="text-left">REST DAY</td><td class="text-center" id="pBV">0</td><td class="amount" id="pBW">0.00</td></tr>
+            <tr><td class="text-left">REST DAY OT</td><td class="text-center" id="pBX">0</td><td class="amount" id="pBY">0.00</td></tr>
+            <tr><td class="text-left">REST DAY NP</td><td class="text-center" id="pBZ">0</td><td class="amount" id="pCA">0.00</td></tr>
+            <tr><td class="text-left">REST DAY NP OT</td><td class="text-center" id="pCB">0</td><td class="amount" id="pCC">0.00</td></tr>
+            <tr><td class="text-left">LEAVE WITH PAY</td><td class="text-center" id="pCT">0</td><td class="amount" id="pCU">0.00</td></tr>
+            <tr class="highlight-row">
+              <td colspan="2" class="text-left">GROSS PAY</td>
+              <td class="amount" id="pCX">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- DEDUCTIONS SECTION -->
+        <div class="section-header">DEDUCTIONS</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-left" style="width: 75%;">DEDUCTION ITEM</th>
+              <th class="amount" style="width: 25%;">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="text-left">WELFARE</td><td class="amount" id="pDA">0.00</td></tr>
+            <tr><td class="text-left">HEALTH INSURANCE</td><td class="amount" id="pDB">0.00</td></tr>
+            <tr><td class="text-left">INSURANCE CARD</td><td class="amount" id="pDC">0.00</td></tr>
+            <tr><td class="text-left">MISC.</td><td class="amount" id="pDD">0.00</td></tr>
+            <tr><td class="text-left">MEDICAL</td><td class="amount" id="pDE">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 1</td><td class="amount" id="pDF">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 2</td><td class="amount" id="pDG">0.00</td></tr>
+            <tr><td class="text-left">SALARY LOAN 3</td><td class="amount" id="pDR">0.00</td></tr>
+            <tr><td class="text-left">SSS LOAN</td><td class="amount" id="pDH">0.00</td></tr>
+            <tr><td class="text-left">SSS CALAMITY LOAN</td><td class="amount" id="pDI">0.00</td></tr>
+            <tr><td class="text-left">HDMF LOAN</td><td class="amount" id="pDJ">0.00</td></tr>
+            <tr><td class="text-left">HDMF CALAMITY LOAN</td><td class="amount" id="pDK">0.00</td></tr>
+            <tr class="highlight-row">
+              <td class="text-left">TOTAL DEDUCTIONS</td>
+              <td class="amount" id="pDO">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- ADJUSTMENTS & NET TAKE HOME SECTION -->
+        <div class="section-header">ADJUSTMENTS & NET TAKE HOME</div>
+        <table class="table">
+          <tbody>
+            <tr><td class="text-left" style="width: 75%;">PAYROLL ADJUSTMENT 1</td><td class="amount" style="width: 25%;" id="pDP">0.00</td></tr>
+            <tr><td class="text-left">PAYROLL ADJUSTMENT 2</td><td class="amount" id="pDQ">0.00</td></tr>
+            <tr><td class="text-left">REFUND SALARY</td><td class="amount" id="pDT">0.00</td></tr>
+            <tr class="net-pay-row">
+              <td class="text-left">NET PAY</td>
+              <td class="amount" id="pDV">0.00</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="input-group">
-        <label>Payroll Period</label>
-        <input type="text" id="payrollPeriod" value="JUNE 26, 2026 - JULY 10, 2026">
+
+      <!-- BOTTOM ACTION BUTTONS -->
+      <div class="payslip-actions">
+        <button class="btn-save" onclick="savePayslipPDF()">SAVE AS PDF</button>
+        <button class="btn-print" onclick="printPayslip()">PRINT PAYSLIP</button>
       </div>
     </div>
+  </div>
 
-    <div class="input-group">
-      <label>Starting Excel Row (e.g. 8)</label>
-      <input type="number" id="startRow" value="8" min="1">
+  <!-- REGISTER ID MODAL -->
+  <div id="registerModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>REGISTER NEW EMPLOYEE ID</h3>
+        <button class="close-btn" onclick="closeRegisterModal()">&times;</button>
+      </div>
+      
+      <div class="input-group">
+        <label>EMPLOYEE ID NUMBER</label>
+        <input type="text" id="regEmpId" placeholder="e.g. IS058 or 1805423">
+      </div>
+      
+      <div class="input-group">
+        <label>DESIRED 6-DIGIT PIN</label>
+        <input type="password" id="regPin" placeholder="ENTER 6-DIGIT PIN" maxlength="6">
+      </div>
+
+      <div class="input-group">
+        <label>RE-ENTER 6-DIGIT PIN</label>
+        <input type="password" id="regPinConfirm" placeholder="RE-ENTER 6-DIGIT PIN" maxlength="6">
+      </div>
+
+      <button class="btn-primary" style="background:#27a365;" onclick="submitRegistration()">SUBMIT REGISTRATION</button>
+      <div id="regStatus" style="margin-top: 10px; font-weight: bold; text-align: center; font-size: 14px;"></div>
     </div>
-
-    <button class="btn-sync" onclick="processAndUploadExcel()">PROCESS AND UPLOAD TO FIREBASE</button>
-
-    <div id="logBox"></div>
   </div>
 
   <script>
@@ -156,162 +411,301 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    function logMessage(msg) {
-      const box = document.getElementById("logBox");
-      box.style.display = "block";
-      box.innerHTML += `> ${msg}<br>`;
-      box.scrollTop = box.scrollHeight;
+    /* Modal Control */
+    function openRegisterModal() {
+      document.getElementById("registerModal").style.display = "flex";
+      document.getElementById("regStatus").innerHTML = "";
+    }
+    
+    function closeRegisterModal() {
+      document.getElementById("registerModal").style.display = "none";
+      document.getElementById("regEmpId").value = "";
+      document.getElementById("regPin").value = "";
+      document.getElementById("regPinConfirm").value = "";
     }
 
-    function getVal(sheet, cellAddress) {
-      const cell = sheet[cellAddress];
-      return cell ? cell.v : 0;
-    }
+    /* Submit Registration Against Whitelist */
+    async function submitRegistration() {
+      const rawEmpId = document.getElementById("regEmpId").value.trim();
+      const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-    async function processAndUploadExcel() {
-      const fileInput = document.getElementById("excelFile");
-      const logBox = document.getElementById("logBox");
-      logBox.innerHTML = "";
+      const pin = document.getElementById("regPin").value.trim();
+      const pinConfirm = document.getElementById("regPinConfirm").value.trim();
+      const statusDiv = document.getElementById("regStatus");
 
-      if (fileInput.files.length === 0) {
-        alert("Please select an Excel file first.");
+      statusDiv.innerHTML = "";
+
+      if (!empId || !pin || !pinConfirm) {
+        statusDiv.innerHTML = "<span style='color:red;'>PLEASE FILL IN ALL FIELDS.</span>";
         return;
       }
 
-      const file = fileInput.files[0];
-      const reader = new FileReader();
+      const pinRegex = /^\d{6}$/;
+      if (!pinRegex.test(pin)) {
+        statusDiv.innerHTML = "<span style='color:red;'>PIN MUST BE EXACTLY 6 DIGITS (NUMBERS ONLY).</span>";
+        return;
+      }
 
-      const company = document.getElementById("companyName").value;
-      const client = document.getElementById("clientName").value;
-      const payrollDate = document.getElementById("payrollDate").value;
-      const payrollPeriod = document.getElementById("payrollPeriod").value;
-      const startRow = parseInt(document.getElementById("startRow").value) || 8;
+      if (pin !== pinConfirm) {
+        statusDiv.innerHTML = "<span style='color:red;'>PINS DO NOT MATCH. PLEASE TRY AGAIN.</span>";
+        return;
+      }
 
-      reader.onload = async function(e) {
-        try {
-          logMessage("Reading Excel file...");
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          
-          // Use the first worksheet or Sheet2 based on your reference
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
+      try {
+        statusDiv.innerHTML = "<span style='color:blue;'>Validating Whitelist...</span>";
 
-          logMessage(`Processing worksheet: ${sheetName}`);
+        const whitelistDoc = await db.collection("whitelist").doc(empId).get();
 
-          let currentRow = startRow;
-          let successCount = 0;
-
-          while (true) {
-            const idCell = getVal(sheet, `F${currentRow}`);
-            const nameCell = getVal(sheet, `G${currentRow}`);
-
-            // Stop condition if ID cell is empty
-            if (!idCell || String(idCell).trim() === "") {
-              break;
-            }
-
-            const empId = String(idCell).trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            const empName = String(nameCell).trim();
-
-            logMessage(`Reading Row ${currentRow} -> ID: ${empId}, Name: ${empName}`);
-
-            // Build the exact comprehensive row mapping matching your index template
-            const payslipData = {
-              empId: empId,
-              empName: empName,
-              company: company,
-              client: client,
-              payrollDate: payrollDate,
-              payrollPeriod: payrollPeriod,
-
-              // --- EARNINGS & HOURS ---
-              AQ: getVal(sheet, `AQ${currentRow}`),
-              AR: getVal(sheet, `AR${currentRow}`),
-              AS: getVal(sheet, `AS${currentRow}`),
-              AV: getVal(sheet, `AV${currentRow}`),
-              AW: getVal(sheet, `AW${currentRow}`),
-              AZ: getVal(sheet, `AZ${currentRow}`),
-              BA: getVal(sheet, `BA${currentRow}`),
-              BB: getVal(sheet, `BB${currentRow}`),
-              BC: getVal(sheet, `BC${currentRow}`),
-              BD: getVal(sheet, `BD${currentRow}`),
-              BE: getVal(sheet, `BE${currentRow}`),
-              BF: getVal(sheet, `BF${currentRow}`),
-              BG: getVal(sheet, `BG${currentRow}`),
-              BH: getVal(sheet, `BH${currentRow}`),
-              BI: getVal(sheet, `BI${currentRow}`),
-              BJ: getVal(sheet, `BJ${currentRow}`),
-              BK: getVal(sheet, `BK${currentRow}`),
-              BL: getVal(sheet, `BL${currentRow}`),
-              BM: getVal(sheet, `BM${currentRow}`),
-              BN: getVal(sheet, `BN${currentRow}`),
-              BO: getVal(sheet, `BO${currentRow}`),
-              BP: getVal(sheet, `BP${currentRow}`),
-              BQ: getVal(sheet, `BQ${currentRow}`),
-              BR: getVal(sheet, `BR${currentRow}`),
-              BS: getVal(sheet, `BS${currentRow}`),
-              BV: getVal(sheet, `BV${currentRow}`),
-              BW: getVal(sheet, `BW${currentRow}`),
-              BX: getVal(sheet, `BX${currentRow}`),
-              BY: getVal(sheet, `BY${currentRow}`),
-              BZ: getVal(sheet, `BZ${currentRow}`),
-              CA: getVal(sheet, `CA${currentRow}`),
-              CB: getVal(sheet, `CB${currentRow}`),
-              CC: getVal(sheet, `CC${currentRow}`),
-              CT: getVal(sheet, `CT${currentRow}`),
-              CU: getVal(sheet, `CU${currentRow}`),
-              CX: getVal(sheet, `CX${currentRow}`), // Gross Pay
-
-              // --- DEDUCTIONS ---
-              DA: getVal(sheet, `DA${currentRow}`),
-              DB: getVal(sheet, `DB${currentRow}`),
-              DC: getVal(sheet, `DC${currentRow}`),
-              DD: getVal(sheet, `DD${currentRow}`),
-              DE: getVal(sheet, `DE${currentRow}`),
-              DF: getVal(sheet, `DF${currentRow}`),
-              DG: getVal(sheet, `DG${currentRow}`),
-              DR: getVal(sheet, `DR${currentRow}`),
-              DH: getVal(sheet, `DH${currentRow}`),
-              DI: getVal(sheet, `DI${currentRow}`),
-              DJ: getVal(sheet, `DJ${currentRow}`),
-              DK: getVal(sheet, `DK${currentRow}`),
-              DO: getVal(sheet, `DO${currentRow}`), // Total Deductions
-
-              // --- ADJUSTMENTS & NET PAY ---
-              DP: getVal(sheet, `DP${currentRow}`),
-              DQ: getVal(sheet, `DQ${currentRow}`),
-              DT: getVal(sheet, `DT${currentRow}`),
-              DV: getVal(sheet, `DV${currentRow}`), // Net Pay
-
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            // Create a unique document ID per employee and payroll date
-            const docId = `${empId}_${payrollDate.replace(/[^a-zA-Z0-9]/g, '_')}`;
-            
-            // Save to Firestore payslips collection
-            await db.collection("payslips").doc(docId).set(payslipData, { merge: true });
-            
-            // Also ensure ID is in whitelist collection for registration checks
-            await db.collection("whitelist").doc(empId).set({
-              empId: empId,
-              name: empName,
-              active: true
-            }, { merge: true });
-
-            successCount++;
-            currentRow++;
-          }
-
-          logMessage(`SUCCESS: Uploaded ${successCount} employee payslips to Firebase!`);
-        } catch (err) {
-          console.error(err);
-          logMessage(`ERROR: ${err.message}`);
+        if (!whitelistDoc.exists) {
+          statusDiv.innerHTML = "<span style='color:red;'>ID NOT AUTHORIZED / NOT IN WHITELIST.</span>";
+          return;
         }
+
+        const empDoc = await db.collection("employees").doc(empId).get();
+        if (empDoc.exists && empDoc.data().pin) {
+          statusDiv.innerHTML = "<span style='color:red;'>THIS ID IS ALREADY REGISTERED. PLEASE LOG IN.</span>";
+          return;
+        }
+
+        await db.collection("employees").doc(empId).set({
+          empId: String(empId),
+          pin: String(pin),
+          registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        statusDiv.innerHTML = "<span style='color:green;'>REGISTRATION SUCCESSFUL! YOU CAN NOW LOG IN.</span>";
+        
+        setTimeout(() => {
+          closeRegisterModal();
+        }, 2000);
+
+      } catch (err) {
+        console.error(err);
+        statusDiv.innerHTML = "<span style='color:red;'>ERROR: " + err.message + "</span>";
+      }
+    }
+
+    /* Helper function to clean and format amounts safely */
+    function formatVal(val) {
+      if (val === undefined || val === null || val === "" || val === "-") return "0.00";
+      const num = parseFloat(String(val).replace(/,/g, ''));
+      return isNaN(num) ? "0.00" : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatCount(val) {
+      if (val === undefined || val === null || val === "" || val === "0") return "-";
+      return val;
+    }
+
+    /* View Payslip Function */
+    async function viewPayslip() {
+      const rawEmpId = document.getElementById("empId").value.trim();
+      const empId = rawEmpId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const pin = document.getElementById("pin").value.trim();
+      
+      const month = document.getElementById("pMonth").value;
+      const day = document.getElementById("pDay").value.trim();
+      const year = document.getElementById("pYear").value.trim();
+
+      const errorMsg = document.getElementById("errorMsg");
+      const box = document.getElementById("payslipBox");
+
+      errorMsg.style.display = "none";
+      box.style.display = "none";
+
+      if(!empId || !pin) {
+        errorMsg.innerText = "PLEASE ENTER BOTH EMPLOYEE ID AND PIN.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      if(!month || !day || !year) {
+        errorMsg.innerText = "PLEASE SELECT MONTH, AND TYPE BOTH DAY AND YEAR.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      try {
+        const empDoc = await db.collection("employees").doc(empId).get();
+        if(!empDoc.exists || String(empDoc.data().pin) !== String(pin)) {
+          errorMsg.innerText = "INVALID EMPLOYEE ID OR PIN.";
+          errorMsg.style.display = "block";
+          return;
+        }
+
+        const snapshot = await db.collection("payslips")
+          .where("empId", "==", empId)
+          .get();
+
+        if(snapshot.empty) {
+          errorMsg.innerText = "NO PAYSLIP RECORDS FOUND FOR THIS EMPLOYEE ID.";
+          errorMsg.style.display = "block";
+          return;
+        }
+
+        let matchedPayslip = null;
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const pDateStr = String(data.payrollDate || "").toUpperCase();
+
+          if (pDateStr.includes(month) && pDateStr.includes(day) && pDateStr.includes(year)) {
+            matchedPayslip = data;
+          }
+        });
+
+        if(!matchedPayslip) {
+          errorMsg.innerText = `NO PAYSLIP FOUND FOR ${month} ${day}, ${year}. PLEASE CHECK THE DATE.`;
+          errorMsg.style.display = "block";
+          return;
+        }
+
+        const p = matchedPayslip;
+
+        /* Header Info */
+        document.getElementById("pA1").innerText = p.company || "";
+        document.getElementById("pA2").innerText = p.client || "";
+        document.getElementById("pA3").innerText = p.payrollDate || "";
+        document.getElementById("pA4").innerText = p.payrollPeriod || "";
+        document.getElementById("pF").innerText = p.empId || "";
+        document.getElementById("pG").innerText = p.empName || "";
+
+        /* STRICT COLUMN MAPPING (AQ, AR, AS, etc.) with robust fallback */
+        const aqVal = parseFloat(String(p.AQ ?? p.pAQ ?? "0").replace(/,/g, '')) || 0;
+        const arVal = parseFloat(String(p.AR ?? p.pAR ?? "0").replace(/,/g, '')) || 0;
+        let asVal = parseFloat(String(p.AS ?? p.pAS ?? "0").replace(/,/g, '')) || 0;
+
+        if (aqVal > 0 && arVal > 0) {
+          asVal = aqVal * arVal;
+        }
+
+        document.getElementById("pAQ").innerText = formatCount(aqVal);
+        document.getElementById("pAS").innerText = formatVal(asVal);
+
+        /* 2. REG OT */
+        document.getElementById("pAV").innerText = formatCount(p.AV ?? p.pAV);
+        document.getElementById("pAW").innerText = formatVal(p.AW ?? p.pAW);
+
+        /* 3. NP */
+        document.getElementById("pAZ").innerText = formatCount(p.AZ ?? p.pAZ);
+        document.getElementById("pBA").innerText = formatVal(p.BA ?? p.pBA);
+
+        /* 4. REG OT NP */
+        document.getElementById("pBB").innerText = formatCount(p.BB ?? p.pBB);
+        document.getElementById("pBC").innerText = formatVal(p.BC ?? p.pBC);
+
+        /* 5. REGULAR HOLIDAY PAY */
+        document.getElementById("pBD").innerText = formatCount(p.BD ?? p.pBD);
+        document.getElementById("pBE").innerText = formatVal(p.BE ?? p.pBE);
+
+        /* 6. REGULAR HOLIDAY DUTY */
+        document.getElementById("pBF").innerText = formatCount(p.BF ?? p.pBF);
+        document.getElementById("pBG").innerText = formatVal(p.BG ?? p.pBG);
+
+        /* 7. REGULAR HOLIDAY OT */
+        document.getElementById("pBH").innerText = formatCount(p.BH ?? p.pBH);
+        document.getElementById("pBI").innerText = formatVal(p.BI ?? p.pBI);
+
+        /* 8. REGULAR HOLIDAY NP */
+        document.getElementById("pBJ").innerText = formatCount(p.BJ ?? p.pBJ);
+        document.getElementById("pBK").innerText = formatVal(p.BK ?? p.pBK);
+
+        /* 9. SPECIAL HOLIDAY DUTY */
+        document.getElementById("pBL").innerText = formatCount(p.BL ?? p.pBL);
+        document.getElementById("pBM").innerText = formatVal(p.BM ?? p.pBM);
+
+        /* 10. SPECIAL HOLIDAY OT */
+        document.getElementById("pBN").innerText = formatCount(p.BN ?? p.pBN);
+        document.getElementById("pBO").innerText = formatVal(p.BO ?? p.pBO);
+
+        /* 11. SPECIAL HOLIDAY NP */
+        document.getElementById("pBP").innerText = formatCount(p.BP ?? p.pBP);
+        document.getElementById("pBQ").innerText = formatVal(p.BQ ?? p.pBQ);
+
+        /* 12. SPECIAL HOLIDAY OT NP */
+        document.getElementById("pBR").innerText = formatCount(p.BR ?? p.pBR);
+        document.getElementById("pBS").innerText = formatVal(p.BS ?? p.pBS);
+
+        /* 13. REST DAY */
+        document.getElementById("pBV").innerText = formatCount(p.BV ?? p.pBV);
+        document.getElementById("pBW").innerText = formatVal(p.BW ?? p.pBW);
+
+        /* 14. REST DAY OT */
+        document.getElementById("pBX").innerText = formatCount(p.BX ?? p.pBX);
+        document.getElementById("pBY").innerText = formatVal(p.BY ?? p.pBY);
+
+        /* 15. REST DAY NP */
+        document.getElementById("pBZ").innerText = formatCount(p.BZ ?? p.pBZ);
+        document.getElementById("pCA").innerText = formatVal(p.CA ?? p.pCA);
+
+        /* 16. REST DAY NP OT */
+        document.getElementById("pCB").innerText = formatCount(p.CB ?? p.pCB);
+        document.getElementById("pCC").innerText = formatVal(p.CC ?? p.pCC);
+
+        /* 17. LEAVE WITH PAY */
+        document.getElementById("pCT").innerText = formatCount(p.CT ?? p.pCT);
+        document.getElementById("pCU").innerText = formatVal(p.CU ?? p.pCU);
+
+        /* GROSS PAY */
+        document.getElementById("pCX").innerText = formatVal(p.CX ?? p.pCX ?? p.grossPay);
+
+        /* DEDUCTIONS */
+        document.getElementById("pDA").innerText = formatVal(p.DA ?? p.pDA);
+        document.getElementById("pDB").innerText = formatVal(p.DB ?? p.pDB);
+        document.getElementById("pDC").innerText = formatVal(p.DC ?? p.pDC);
+        document.getElementById("pDD").innerText = formatVal(p.DD ?? p.pDD);
+        document.getElementById("pDE").innerText = formatVal(p.DE ?? p.pDE);
+        document.getElementById("pDF").innerText = formatVal(p.DF ?? p.pDF);
+        document.getElementById("pDG").innerText = formatVal(p.DG ?? p.pDG);
+        document.getElementById("pDR").innerText = formatVal(p.DR ?? p.pDR);
+        document.getElementById("pDH").innerText = formatVal(p.DH ?? p.pDH);
+        document.getElementById("pDI").innerText = formatVal(p.DI ?? p.pDI);
+        document.getElementById("pDJ").innerText = formatVal(p.DJ ?? p.pDJ);
+        document.getElementById("pDK").innerText = formatVal(p.DK ?? p.pDK);
+        document.getElementById("pDO").innerText = formatVal(p.DO ?? p.pDO ?? p.totalDeduction);
+
+        /* ADJUSTMENTS & NET TAKE HOME */
+        document.getElementById("pDP").innerText = formatVal(p.DP ?? p.pDP);
+        document.getElementById("pDQ").innerText = formatVal(p.DQ ?? p.pDQ);
+        document.getElementById("pDT").innerText = formatVal(p.DT ?? p.pDT);
+        document.getElementById("pDV").innerText = formatVal(p.DV ?? p.pDV ?? p.netPay);
+
+        box.style.display = "block";
+
+      } catch (err) {
+        console.error(err);
+        errorMsg.innerText = "ERROR LOADING PAYSLIP: " + err.message;
+        errorMsg.style.display = "block";
+      }
+    }
+
+    /* SAVE PAYSLIP AS PDF */
+    function savePayslipPDF() {
+      const element = document.getElementById("payslipPrintableArea");
+      
+      const empId = document.getElementById("pF").innerText.trim() || "EMPLOYEE";
+      const clientName = document.getElementById("pA2").innerText.trim() || "CLIENT";
+      const payrollDate = document.getElementById("pA3").innerText.trim() || "DATE";
+
+      const cleanEmpId = empId.replace(/[^a-zA-Z0-9_-]/g, '');
+      const cleanClient = clientName.replace(/[^a-zA-Z0-9_-]/g, ' ');
+      const cleanDate = payrollDate.replace(/[^a-zA-Z0-9_-]/g, ' ');
+
+      const fileName = `${cleanEmpId}-${cleanClient}-${cleanDate}.pdf`.replace(/\s+/g, ' ');
+
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      reader.readAsArrayBuffer(file);
+      html2pdf().set(opt).from(element).save();
+    }
+
+    /* PRINT PAYSLIP */
+    function printPayslip() {
+      window.print();
     }
   </script>
 </body>
