@@ -203,7 +203,7 @@
       <div id="whitelistPanel" class="whitelist-panel">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <strong style="color: #276749;">WHITELIST MANAGEMENT</strong>
-          <span style="font-size: 11px; color: #4a5568;">Only active whitelisted IDs are allowed to self-register</span>
+          <span style="font-size: 11px; color: #4a5568;">Only whitelisted IDs are allowed to self-register</span>
         </div>
 
         <div class="excel-actions">
@@ -214,7 +214,7 @@
         </div>
 
         <div style="margin-top: 5px;">
-          <input type="text" id="whitelistSearchInput" placeholder="Search Whitelisted ID Number or Name..." onkeyup="filterWhitelistTable()">
+          <input type="text" id="whitelistSearchInput" placeholder="Search Whitelisted ID Number..." onkeyup="filterWhitelistTable()">
         </div>
 
         <div class="whitelist-table-container">
@@ -222,13 +222,11 @@
             <thead>
               <tr>
                 <th>WHITELISTED ID NUMBER</th>
-                <th>NAME (FAMILY, FIRST)</th>
-                <th>STATUS</th>
                 <th style="text-align: right;">ACTION</th>
               </tr>
             </thead>
             <tbody id="whitelistTableBody">
-              <tr><td colspan="4" style="text-align: center;">Loading whitelist...</td></tr>
+              <tr><td colspan="2" style="text-align: center;">Loading whitelist...</td></tr>
             </tbody>
           </table>
         </div>
@@ -578,6 +576,7 @@
     let allWhitelistedRecords = [];
     let draggedElement = null;
 
+    // Helper: Remove hyphens and whitespace to unify ID representation
     function cleanEmpId(id) {
       if (!id) return '';
       return String(id).replace(/[-\s]/g, '').trim().toUpperCase();
@@ -586,8 +585,7 @@
     function arrayBufferToBase64(buffer) {
       let binary = '';
       const bytes = new Uint8Array(buffer);
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) {
+      for (let i = 0; i < bytes.byteLength; i++) {
         binary += String.fromCharCode(bytes[i]);
       }
       return window.btoa(binary);
@@ -627,25 +625,23 @@
       return isNaN(parsed) ? 0 : parsed;
     }
 
-    /* Convert Column Letter (e.g. "AQ") to 0-indexed column index */
-    function colToIdx(colStr) {
-      if (!colStr) return -1;
-      let s = colStr.trim().toUpperCase().replace(/[0-9]/g, '');
-      let num = 0;
-      for (let i = 0; i < s.length; i++) {
-        num = num * 26 + (s.charCodeAt(i) - 64);
+    /* --- STRICT VALUE-ONLY CELL EXTRACTION --- */
+    function getCellValue(worksheet, colLetter, rowNumber) {
+      if (!colLetter) return null;
+      const cellAddress = colLetter.trim().toUpperCase() + rowNumber;
+      const cell = worksheet[cellAddress];
+      if (!cell) return null;
+      
+      // cell.v contains the computed value (evaluated result) from Excel, not the formula string (cell.f)
+      if (cell.v !== undefined && cell.v !== null) {
+        return cell.v;
       }
-      return num - 1;
+      // Fallback to formatted text value if available
+      return cell.w !== undefined ? cell.w : null;
     }
 
-    /* Row array lookup engine to replace memory-heavy getCellValue */
-    function getArrayRowVal(rowArr, colStr) {
-      const idx = colToIdx(colStr);
-      if (idx < 0 || !rowArr || idx >= rowArr.length) return null;
-      return rowArr[idx];
-    }
-
-    function evaluateFormulaOrColOptimized(inputExpr, rowArr) {
+    /* --- FORMULA EVALUATION ENGINE TO COMPUTED VALUE --- */
+    function evaluateFormulaOrCol(inputExpr, worksheet, rowNumber) {
       if (!inputExpr) return 0;
       let expr = String(inputExpr).trim();
       if (!expr) return 0;
@@ -654,37 +650,43 @@
         expr = expr.substring(1).trim();
       }
 
+      // Single column mapping (e.g. "AQ")
       if (/^[A-Za-z]+$/.test(expr)) {
-        return parseExcelNum(getArrayRowVal(rowArr, expr));
+        return parseExcelNum(getCellValue(worksheet, expr, rowNumber));
       }
 
+      // Extract column symbols from custom formula
       const colTokens = expr.match(/\b[A-Za-z]+[0-9]*\b/g) || [];
-      if (colTokens.length === 0) return parseExcelNum(expr);
-
       const uniqueCols = [...new Set(colTokens.map(t => t.replace(/[0-9]/g, '').toUpperCase()))];
-      if (uniqueCols.length > 5) return 0;
+
+      if (uniqueCols.length > 5) {
+        console.warn("Formula exceeds 5 unique column limit:", expr);
+        return 0;
+      }
 
       let evalExpr = expr.toUpperCase();
-      const sortedTokens = [...colTokens].sort((a, b) => b.length - a.length);
 
-      sortedTokens.forEach(token => {
+      // Replace column names with actual computed cell values
+      colTokens.forEach(token => {
         const colLetter = token.replace(/[0-9]/g, '');
-        const cellVal = parseExcelNum(getArrayRowVal(rowArr, colLetter));
+        const cellVal = parseExcelNum(getCellValue(worksheet, colLetter, rowNumber));
         const tokenRegex = new RegExp('\\b' + token.toUpperCase() + '\\b', 'g');
         evalExpr = evalExpr.replace(tokenRegex, cellVal < 0 ? `(${cellVal})` : cellVal);
       });
 
-      if (!/^[0-9.+\-*/()\s]+$/.test(evalExpr)) return 0;
+      if (!/^[0-9.+\-*/()\s]+$/.test(evalExpr)) {
+        console.warn("Formula contains unsupported characters:", evalExpr);
+        return 0;
+      }
 
       try {
         const result = new Function(`"use strict"; return (${evalExpr})`)();
-        return (isNaN(result) || !isFinite(result)) ? 0 : result;
+        return (isNaN(result) || !isFinite(result)) ? 0 : Number(result.toFixed(2));
       } catch (err) {
+        console.error("Error evaluating formula:", expr, err);
         return 0;
       }
     }
-
-    loadClients();
 
     auth.onAuthStateChanged(user => {
       if (user) {
@@ -692,6 +694,7 @@
         document.getElementById("loginCard").style.display = "none";
         document.getElementById("uploadAuthCard").style.display = "none";
         document.getElementById("adminDashboard").style.display = "block";
+        loadClients();
         loadEmployees();
         loadWhitelist();
       } else {
@@ -722,7 +725,6 @@
 
     function renderClientsTable() {
       const tbody = document.getElementById("clientListBody");
-      if (!tbody) return;
       tbody.innerHTML = "";
       if (clientsList.length === 0) {
         tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No clients added yet.</td></tr>`;
@@ -743,7 +745,6 @@
 
     function populateClientDropdown() {
       const select = document.getElementById("authClientSelect");
-      if (!select) return;
       select.innerHTML = `<option value="">-- SELECT CLIENT --</option>`;
       clientsList.forEach(c => {
         select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
@@ -771,7 +772,11 @@
     /* --- WHITELIST MANAGEMENT MODULE --- */
     function toggleWhitelistPanel() {
       const panel = document.getElementById("whitelistPanel");
-      panel.style.display = (panel.style.display === "flex") ? "none" : "flex";
+      if (panel.style.display === "flex") {
+        panel.style.display = "none";
+      } else {
+        panel.style.display = "flex";
+      }
     }
 
     function loadWhitelist() {
@@ -786,19 +791,15 @@
 
     function renderWhitelistTable(list) {
       const tbody = document.getElementById("whitelistTableBody");
-      if (!tbody) return;
       tbody.innerHTML = "";
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #718096;">No Whitelisted IDs found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #718096;">No Whitelisted IDs found.</td></tr>`;
         return;
       }
       list.forEach(item => {
         const tr = document.createElement("tr");
-        const statusClass = (item.status || "ACTIVE").toUpperCase() === "ACTIVE" ? "status-upload" : "status-override";
         tr.innerHTML = `
           <td><strong>${item.displayId || item.id}</strong></td>
-          <td><strong>${item.name || "---"}</strong></td>
-          <td><span class="status-badge ${statusClass}">${item.status || "ACTIVE"}</span></td>
           <td style="text-align: right;">
             <button class="btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteWhitelistId('${item.id}')">REMOVE</button>
           </td>
@@ -810,14 +811,12 @@
     function filterWhitelistTable() {
       const q = cleanEmpId(document.getElementById("whitelistSearchInput").value);
       const filtered = allWhitelistedRecords.filter(item => {
-        const nameClean = (item.name || "").toUpperCase();
-        return cleanEmpId(item.id).includes(q) || cleanEmpId(item.displayId || '').includes(q) || nameClean.includes(q);
+        return cleanEmpId(item.id).includes(q) || cleanEmpId(item.displayId || '').includes(q);
       });
       renderWhitelistTable(filtered);
     }
 
     function triggerWhitelistUpload() {
-      document.getElementById("whitelistFileInput").value = "";
       document.getElementById("whitelistFileInput").click();
     }
 
@@ -834,7 +833,7 @@
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
           const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-          const parsedRecords = [];
+          const parsedIds = [];
           const seenCleanedIds = new Set();
           let duplicatesFound = false;
 
@@ -842,50 +841,33 @@
             const row = rows[i];
             if (!row || row.length === 0) continue;
 
-            const rawId = String(row[0] || "").trim();
-            if (!rawId || rawId.toUpperCase() === "ID" || rawId.toUpperCase() === "EMPLOYEE ID") continue;
+            const rawVal = String(row[0] || "").trim();
+            if (!rawVal || rawVal.toUpperCase() === "ID" || rawVal.toUpperCase() === "EMPLOYEE ID") continue;
 
-            const cleaned = cleanEmpId(rawId);
+            const cleaned = cleanEmpId(rawVal);
             if (!cleaned) continue;
-
-            // Extract Name: Supports standard columns (B & C) or designated H (index 7) & I (index 8)
-            let lastName = String(row[1] || row[7] || "").trim().toUpperCase();
-            let firstName = String(row[2] || row[8] || "").trim().toUpperCase();
-            let status = String(row[3] || row[9] || "ACTIVE").trim().toUpperCase();
-
-            // ACTIVE STATUS FILTERING RULE
-            if (status && status !== "ACTIVE") continue;
-
-            let fullName = "";
-            if (lastName && firstName) {
-              fullName = `${lastName}, ${firstName}`;
-            } else if (lastName) {
-              fullName = lastName;
-            } else {
-              fullName = "---";
-            }
 
             if (seenCleanedIds.has(cleaned)) {
               duplicatesFound = true;
               break;
             }
             seenCleanedIds.add(cleaned);
-            parsedRecords.push({ raw: rawId, clean: cleaned, name: fullName, status: "ACTIVE" });
+            parsedIds.push({ raw: rawVal, clean: cleaned });
           }
 
           if (duplicatesFound) {
-            alert("UPLOAD REJECTED: The Excel file contains duplicate Employee IDs.");
+            alert("UPLOAD REJECTED: The Excel file contains duplicate Employee IDs (ignoring hyphens/spaces). Please clean the list and try again.");
             fileInput.value = "";
             return;
           }
 
-          if (parsedRecords.length === 0) {
-            alert("UPLOAD REJECTED: No valid Active Employee IDs found in the file.");
+          if (parsedIds.length === 0) {
+            alert("UPLOAD REJECTED: No valid ID numbers found in Column A.");
             fileInput.value = "";
             return;
           }
 
-          if (!confirm(`Uploading will OVERWRITE current whitelist with ${parsedRecords.length} ACTIVE whitelisted records. Do you want to proceed?`)) {
+          if (!confirm(`Uploading will OVERWRITE the current whitelist with ${parsedIds.length} new IDs. Do you want to proceed?`)) {
             fileInput.value = "";
             return;
           }
@@ -896,7 +878,7 @@
           existingSnapshot.forEach(doc => {
             deleteBatch.delete(doc.ref);
             delCount++;
-            if (delCount === 250) {
+            if (delCount === 400) {
               deleteBatch.commit();
               deleteBatch = db.batch();
               delCount = 0;
@@ -907,17 +889,15 @@
           let writeBatch = db.batch();
           let writeCount = 0;
 
-          for (const item of parsedRecords) {
+          for (const item of parsedIds) {
             const docRef = db.collection("whitelist").doc(item.clean);
             writeBatch.set(docRef, {
               displayId: item.raw,
-              name: item.name,
-              status: item.status,
               createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             writeCount++;
-            if (writeCount === 250) {
+            if (writeCount === 400) {
               await writeBatch.commit();
               writeBatch = db.batch();
               writeCount = 0;
@@ -925,7 +905,7 @@
           }
           if (writeCount > 0) await writeBatch.commit();
 
-          alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedRecords.length} records uploaded.`);
+          alert(`WHITELIST OVERWRITTEN SUCCESSFULLY: ${parsedIds.length} IDs uploaded.`);
           fileInput.value = "";
 
         } catch (err) {
@@ -938,11 +918,12 @@
     }
 
     async function manuallyAddWhitelist() {
-      const inputId = prompt("Enter Whitelisted Employee ID:");
-      if (!inputId) return;
+      const input = prompt("Enter Employee ID to Whitelist:");
+      if (!input) return;
 
-      const rawVal = inputId.trim();
+      const rawVal = input.trim();
       const cleaned = cleanEmpId(rawVal);
+
       if (!cleaned) return alert("Invalid ID number.");
 
       const existingDoc = await db.collection("whitelist").doc(cleaned).get();
@@ -950,18 +931,12 @@
         return alert(`REJECTED: ID Number '${rawVal}' is ALREADY present in the whitelist.`);
       }
 
-      const lastName = (prompt("Enter Family / Last Name:") || "").trim().toUpperCase();
-      const firstName = (prompt("Enter First Name:") || "").trim().toUpperCase();
-      const fullName = (lastName && firstName) ? `${lastName}, ${firstName}` : (lastName || firstName || "---");
-
       await db.collection("whitelist").doc(cleaned).set({
         displayId: rawVal,
-        name: fullName,
-        status: "ACTIVE",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      alert(`ID '${rawVal}' (${fullName}) successfully added to active whitelist!`);
+      alert(`ID '${rawVal}' successfully added to whitelist!`);
     }
 
     async function deleteWhitelistId(docId) {
@@ -972,11 +947,10 @@
 
     async function downloadWhitelistExcel() {
       try {
-        const excelData = [["WHITELISTED EMPLOYEE ID", "NAME (FAMILY, FIRST)", "STATUS"]];
+        const excelData = [["WHITELISTED EMPLOYEE ID"]];
         const snapshot = await db.collection("whitelist").get();
         snapshot.forEach(doc => {
-          const data = doc.data();
-          excelData.push([data.displayId || doc.id, data.name || "---", data.status || "ACTIVE"]);
+          excelData.push([doc.data().displayId || doc.id]);
         });
         const worksheet = XLSX.utils.aoa_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
@@ -991,9 +965,9 @@
     function openMappingModal(clientId) {
       currentMappingClientId = clientId;
       const client = clientsList.find(c => c.id === clientId);
-      document.getElementById("mappingModalTitle").innerText = `Map Columns for: ${client ? client.name : ''}`;
+      document.getElementById("mappingModalTitle").innerText = `Map Columns for: ${client.name}`;
 
-      const mapping = (client && client.mapping) ? client.mapping : {};
+      const mapping = client.mapping || {};
 
       document.getElementById("empIdColInput").value = mapping.empIdCol || "F";
       document.getElementById("empNameColInput").value = mapping.empNameCol || "G";
@@ -1172,6 +1146,7 @@
     /* --- PAYSLIP PREVIEW --- */
     function openPayslipPreview() {
       const client = clientsList.find(c => c.id === currentMappingClientId);
+      
       document.getElementById("prevClientTitle").innerText = client ? client.name : "TECDIA CEBU INC.";
 
       const pDateInput = document.getElementById("authPayrollDate").value;
@@ -1261,7 +1236,7 @@
       document.getElementById("previewModal").style.display = "none";
     }
 
-    /* --- UPLOAD PROCESS & OPTIMIZED EXCEL PARSING --- */
+    /* --- UPLOAD PROCESS & VALUE EXTRACTION --- */
     async function verifyAuthorizationAndUpload() {
       const clientId = document.getElementById("authClientSelect").value;
       const payrollDate = document.getElementById("authPayrollDate").value;
@@ -1305,9 +1280,7 @@
           payrollPeriodStr: `${formatDateDisplay(periodFrom)} - ${formatDateDisplay(periodTo)}`
         };
 
-        const fileInput = document.getElementById("publicPayrollFileInput");
-        fileInput.value = "";
-        fileInput.click();
+        document.getElementById("publicPayrollFileInput").click();
 
       } catch (err) {
         alert("Verification error: " + err.message);
@@ -1318,14 +1291,6 @@
       const fileInput = document.getElementById("publicPayrollFileInput");
       const file = fileInput.files[0];
       if (!file || !activeAuthorizedEmp) return;
-
-      const progressContainer = document.getElementById("uploadProgressContainer");
-      const progressBar = document.getElementById("uploadProgressBar");
-      const statusText = document.getElementById("uploadStatusText");
-
-      if (progressContainer) progressContainer.style.display = "block";
-      if (statusText) statusText.innerText = "Reading Excel file into memory...";
-      if (progressBar) progressBar.value = 5;
 
       const reader = new FileReader();
       reader.onload = async function (e) {
@@ -1342,29 +1307,19 @@
 
           if (!workbook.SheetNames.includes("PAYROLL")) {
             alert("SECURITY REJECTED: Worksheet named 'PAYROLL' not found in file.");
-            if (progressContainer) progressContainer.style.display = "none";
             fileInput.value = "";
             return;
           }
 
           const worksheet = workbook.Sheets["PAYROLL"];
 
-          // Dense array extraction for lightweight memory consumption
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-
-          const row1 = rows[0] || [];
-          const row2 = rows[1] || [];
-          const row3 = rows[2] || [];
-          const row4 = rows[3] || [];
-
-          const a1 = String(row1[0] || "").trim();
-          const a2 = String(row2[0] || "").trim();
-          const a3 = String(row3[0] || "").trim();
-          const a4 = String(row4[0] || "").trim();
+          const a1 = String(getCellValue(worksheet, "A", 1) || "").trim();
+          const a2 = String(getCellValue(worksheet, "A", 2) || "").trim();
+          const a3 = String(getCellValue(worksheet, "A", 3) || "").trim();
+          const a4 = String(getCellValue(worksheet, "A", 4) || "").trim();
 
           if (!a1 || !a2 || !a3 || !a4) {
             alert("SECURITY REJECTED: Cells A1, A2, A3, and A4 must contain text data.");
-            if (progressContainer) progressContainer.style.display = "none";
             fileInput.value = "";
             return;
           }
@@ -1372,10 +1327,9 @@
           const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
           const batchDoc = await db.collection("payroll_batches").doc(batchId).get();
 
-          pendingPayrollWorksheet = rows;
+          pendingPayrollWorksheet = worksheet;
 
           if (batchDoc.exists) {
-            if (progressContainer) progressContainer.style.display = "none";
             document.getElementById("dupClientText").innerText = activeAuthorizedEmp.clientName;
             document.getElementById("dupDateText").innerText = activeAuthorizedEmp.payrollDateStr;
             document.getElementById("overrideEmpIdInput").value = activeAuthorizedEmp.id;
@@ -1384,10 +1338,9 @@
             return;
           }
 
-          await executePayrollProcessing(rows, "UPLOAD", activeAuthorizedEmp.id);
+          await executePayrollProcessing(worksheet, "UPLOAD", activeAuthorizedEmp.id);
 
         } catch (err) {
-          if (progressContainer) progressContainer.style.display = "none";
           alert("Error processing Excel file: " + err.message);
           fileInput.value = "";
         }
@@ -1430,167 +1383,138 @@
       }
     }
 
-    async function executePayrollProcessing(rows, actionType, uploaderId) {
-      const progressContainer = document.getElementById("uploadProgressContainer");
-      const progressBar = document.getElementById("uploadProgressBar");
-      const statusText = document.getElementById("uploadStatusText");
+    /* --- VALUE-ONLY PAYROLL PROCESSING ENGINE --- */
+    async function executePayrollProcessing(worksheet, actionType, uploaderId) {
+      const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
+      const mapping = (clientObj && clientObj.mapping) ? clientObj.mapping : {};
 
-      if (progressContainer) progressContainer.style.display = "block";
-      if (statusText) statusText.innerText = `Processing Excel file (${actionType})...`;
-      if (progressBar) progressBar.value = 0;
+      const empIdCol = mapping.empIdCol || "F";
+      const empNameCol = mapping.empNameCol || "G";
+      const earningsSchema = mapping.earnings || DEFAULT_EARNINGS;
+      const deductionsSchema = mapping.deductions || DEFAULT_DEDUCTIONS;
+      const totalDeductionsCol = mapping.totalDeductionsCol || "";
+      const adjustmentsSchema = mapping.adjustments || DEFAULT_ADJUSTMENTS;
+      const totalAdjustmentsCol = mapping.totalAdjustmentsCol || "";
+      const grossPayCol = mapping.grossPayCol || "BB";
+      const netPayCol = mapping.netPayCol || "BD";
 
-      try {
-        const clientObj = clientsList.find(c => c.id === activeAuthorizedEmp.clientId);
-        const mapping = (clientObj && clientObj.mapping) ? clientObj.mapping : {};
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      const totalRows = range.e.r + 1;
 
-        const empIdCol = mapping.empIdCol || "F";
-        const empNameCol = mapping.empNameCol || "G";
-        const earningsSchema = mapping.earnings || DEFAULT_EARNINGS;
-        const deductionsSchema = mapping.deductions || DEFAULT_DEDUCTIONS;
-        const totalDeductionsCol = mapping.totalDeductionsCol || "";
-        const adjustmentsSchema = mapping.adjustments || DEFAULT_ADJUSTMENTS;
-        const totalAdjustmentsCol = mapping.totalAdjustmentsCol || "";
-        const grossPayCol = mapping.grossPayCol || "BB";
-        const netPayCol = mapping.netPayCol || "BD";
+      let batch = db.batch();
+      let count = 0;
+      let totalUploaded = 0;
 
-        const totalRows = rows.length;
-        let batch = db.batch();
-        let count = 0;
-        let totalUploaded = 0;
+      for (let r = 8; r <= totalRows; r++) {
+        const empName = String(getCellValue(worksheet, empNameCol, r) || getCellValue(worksheet, "G", r) || "").trim();
+        if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
 
-        // Loop starts at row 8 (Index 7)
-        for (let r = 7; r < totalRows; r++) {
-          const rowArr = rows[r];
-          if (!rowArr || rowArr.length === 0) continue;
+        const rawId = String(getCellValue(worksheet, empIdCol, r) || getCellValue(worksheet, "F", r) || getCellValue(worksheet, "A", r) || "").trim();
+        const cleanedId = cleanEmpId(rawId);
+        if (!cleanedId) continue;
 
-          // Asynchronous Yield every 50 rows to unblock thread memory and keep screen responsive
-          if (r % 50 === 0) {
-            if (progressBar) {
-              const percent = Math.round((r / totalRows) * 100);
-              progressBar.value = Math.min(100, Math.max(0, percent));
-            }
-            await new Promise(resolve => setTimeout(resolve, 0));
-          }
+        // Extracts strictly computed static numeric values
+        const earningsItems = earningsSchema.map(item => ({
+          label: item.label,
+          unit: item.unit,
+          qtyVal: evaluateFormulaOrCol(item.qtyCol, worksheet, r),
+          amtVal: evaluateFormulaOrCol(item.amtCol, worksheet, r)
+        }));
 
-          const empName = String(getArrayRowVal(rowArr, empNameCol) || getArrayRowVal(rowArr, "G") || "").trim();
-          if (!empName || empName.toUpperCase().includes("TOTAL")) continue;
+        const deductionItems = deductionsSchema.map(item => ({
+          label: item.label,
+          unit: item.unit,
+          val: evaluateFormulaOrCol(item.col, worksheet, r)
+        }));
 
-          const rawId = String(getArrayRowVal(rowArr, empIdCol) || getArrayRowVal(rowArr, "F") || getArrayRowVal(rowArr, "A") || "").trim();
-          const cleanedId = cleanEmpId(rawId);
-          if (!cleanedId) continue;
+        let calculatedDeductions = 0;
+        deductionItems.forEach(d => calculatedDeductions += parseExcelNum(d.val));
+        const finalTotalDeductions = totalDeductionsCol ? evaluateFormulaOrCol(totalDeductionsCol, worksheet, r) : calculatedDeductions;
 
-          const earningsItems = earningsSchema.map(item => ({
+        let calculatedAdjustments = 0;
+        const adjustmentItems = adjustmentsSchema.map(item => {
+          const val = evaluateFormulaOrCol(item.col, worksheet, r);
+          calculatedAdjustments += parseExcelNum(val);
+          return {
             label: item.label,
             unit: item.unit,
-            qtyCol: item.qtyCol,
-            amtCol: item.amtCol,
-            qtyVal: evaluateFormulaOrColOptimized(item.qtyCol, rowArr),
-            amtVal: evaluateFormulaOrColOptimized(item.amtCol, rowArr)
-          }));
-
-          const deductionItems = deductionsSchema.map(item => ({
-            label: item.label,
-            unit: item.unit,
-            col: item.col,
-            val: evaluateFormulaOrColOptimized(item.col, rowArr)
-          }));
-
-          let calculatedDeductions = 0;
-          deductionItems.forEach(d => calculatedDeductions += d.val);
-          const finalTotalDeductions = totalDeductionsCol ? evaluateFormulaOrColOptimized(totalDeductionsCol, rowArr) : calculatedDeductions;
-
-          let calculatedAdjustments = 0;
-          const adjustmentItems = adjustmentsSchema.map(item => {
-            const val = evaluateFormulaOrColOptimized(item.col, rowArr);
-            calculatedAdjustments += val;
-            return {
-              label: item.label,
-              unit: item.unit,
-              col: item.col,
-              val: val
-            };
-          });
-          const finalTotalAdjustments = totalAdjustmentsCol ? evaluateFormulaOrColOptimized(totalAdjustmentsCol, rowArr) : calculatedAdjustments;
-
-          const finalGrossPay = evaluateFormulaOrColOptimized(grossPayCol, rowArr);
-          const finalNetPay = evaluateFormulaOrColOptimized(netPayCol, rowArr);
-
-          const payslipPayload = {
-            empId: cleanedId,
-            rawEmpId: rawId,
-            empName: empName,
-            agencyName: "INT'L. MANPOWER ESSENTIALS, INC.",
-            clientName: activeAuthorizedEmp.clientName,
-            
-            payrollDateRaw: activeAuthorizedEmp.payrollDate,
-            payrollDateStr: activeAuthorizedEmp.payrollDateStr,
-            payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
-            payrollPeriodTo: activeAuthorizedEmp.periodTo,
-            payrollPeriodStr: activeAuthorizedEmp.payrollPeriodStr,
-
-            earningsItems: earningsItems,
-            deductionItems: deductionItems,
-            adjustmentItems: adjustmentItems,
-
-            grossPay: finalGrossPay,
-            totalDeductions: finalTotalDeductions,
-            totalAdjustments: finalTotalAdjustments,
-            netPay: finalNetPay,
-
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            val: val
           };
-
-          const docRef = db.collection("payslips").doc(cleanedId);
-          batch.set(docRef, payslipPayload, { merge: true });
-
-          count++;
-          totalUploaded++;
-
-          // Commit batch safely at 250 records to prevent Firestore quota limits
-          if (count === 250) {
-            await batch.commit();
-            batch = db.batch();
-            count = 0;
-          }
-        }
-
-        const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
-        const batchRef = db.collection("payroll_batches").doc(batchId);
-        batch.set(batchRef, {
-          client: activeAuthorizedEmp.clientName,
-          payrollDate: activeAuthorizedEmp.payrollDateStr,
-          payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
-          uploadedBy: uploaderId,
-          uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        count++;
-
-        const historyRef = db.collection("payroll_history").doc();
-        batch.set(historyRef, {
-          uploaderId: uploaderId,
-          clientName: activeAuthorizedEmp.clientName,
-          payrollDate: activeAuthorizedEmp.payrollDateStr,
-          payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
-          status: actionType,
-          fileName: currentUploadFileData ? currentUploadFileData.fileName : "Payroll_Upload.xlsx",
-          fileBase64: currentUploadFileData ? currentUploadFileData.fileBase64 : "",
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+        const finalTotalAdjustments = totalAdjustmentsCol ? evaluateFormulaOrCol(totalAdjustmentsCol, worksheet, r) : calculatedAdjustments;
+
+        const finalGrossPay = evaluateFormulaOrCol(grossPayCol, worksheet, r);
+        const finalNetPay = evaluateFormulaOrCol(netPayCol, worksheet, r);
+
+        // Payslip Payload contains static evaluated values only
+        const payslipPayload = {
+          empId: cleanedId,
+          rawEmpId: rawId,
+          empName: empName,
+          agencyName: "INT'L. MANPOWER ESSENTIALS, INC.",
+          clientName: activeAuthorizedEmp.clientName,
+          
+          payrollDateRaw: activeAuthorizedEmp.payrollDate,
+          payrollDateStr: activeAuthorizedEmp.payrollDateStr,
+          payrollPeriodFrom: activeAuthorizedEmp.periodFrom,
+          payrollPeriodTo: activeAuthorizedEmp.periodTo,
+          payrollPeriodStr: activeAuthorizedEmp.payrollPeriodStr,
+
+          earningsItems: earningsItems,
+          deductionItems: deductionItems,
+          adjustmentItems: adjustmentItems,
+
+          grossPay: finalGrossPay,
+          totalDeductions: finalTotalDeductions,
+          totalAdjustments: finalTotalAdjustments,
+          netPay: finalNetPay,
+
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        const docRef = db.collection("payslips").doc(cleanedId);
+        batch.set(docRef, payslipPayload, { merge: true });
+
         count++;
+        totalUploaded++;
 
-        if (count > 0) await batch.commit();
-
-        if (progressContainer) progressContainer.style.display = "none";
-        alert(`SUCCESS: Processed and saved ${totalUploaded} employee payslips.\nAction recorded as [${actionType}].`);
-        document.getElementById("publicPayrollFileInput").value = "";
-        currentUploadFileData = null;
-        showLandingScreen();
-
-      } catch (err) {
-        if (progressContainer) progressContainer.style.display = "none";
-        alert("Upload Processing Error: " + err.message);
-        document.getElementById("publicPayrollFileInput").value = "";
+        if (count === 400) {
+          await batch.commit();
+          batch = db.batch();
+          count = 0;
+        }
       }
+
+      const batchId = `${activeAuthorizedEmp.clientName}_${activeAuthorizedEmp.payrollDate}`.replace(/[^a-zA-Z0-9]/g, '_');
+      const batchRef = db.collection("payroll_batches").doc(batchId);
+      batch.set(batchRef, {
+        client: activeAuthorizedEmp.clientName,
+        payrollDate: activeAuthorizedEmp.payrollDateStr,
+        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
+        uploadedBy: uploaderId,
+        uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      count++;
+
+      const historyRef = db.collection("payroll_history").doc();
+      batch.set(historyRef, {
+        uploaderId: uploaderId,
+        clientName: activeAuthorizedEmp.clientName,
+        payrollDate: activeAuthorizedEmp.payrollDateStr,
+        payrollPeriod: activeAuthorizedEmp.payrollPeriodStr,
+        status: actionType,
+        fileName: currentUploadFileData ? currentUploadFileData.fileName : "Payroll_Upload.xlsx",
+        fileBase64: currentUploadFileData ? currentUploadFileData.fileBase64 : "",
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      count++;
+
+      if (count > 0) await batch.commit();
+
+      alert(`SUCCESS: Processed and saved ${totalUploaded} employee payslips.\nAction recorded as [${actionType}].`);
+      document.getElementById("publicPayrollFileInput").value = "";
+      currentUploadFileData = null;
+      showLandingScreen();
     }
 
     /* --- HISTORY MODAL & DOWNLOADS --- */
@@ -1673,10 +1597,7 @@
       }
     }
 
-    function triggerExcelUpload() {
-      document.getElementById("excelFileInput").value = "";
-      document.getElementById("excelFileInput").click();
-    }
+    function triggerExcelUpload() { document.getElementById("excelFileInput").click(); }
 
     async function handleFileSelected() {
       const fileInput = document.getElementById("excelFileInput");
@@ -1690,9 +1611,8 @@
           const workbook = XLSX.read(data, { type: 'array', raw: false });
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-          const cellA1 = String((rows[0] && rows[0][0]) || "").trim().toUpperCase();
-          const cellB1 = String((rows[0] && rows[0][1]) || "").trim().toUpperCase();
+          const cellA1 = String(getCellValue(worksheet, "A", 1) || "").trim().toUpperCase();
+          const cellB1 = String(getCellValue(worksheet, "B", 1) || "").trim().toUpperCase();
 
           if (cellA1 !== "ID" || cellB1 !== "PIN") {
             alert("SECURITY REJECTED: Header A1 must be 'ID' and B1 must be 'PIN'.");
@@ -1700,6 +1620,7 @@
             return;
           }
 
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
           let batch = db.batch();
           let count = 0;
           let totalUploaded = 0;
@@ -1731,7 +1652,7 @@
             count++;
             totalUploaded++;
 
-            if (count === 250) {
+            if (count === 400) {
               await batch.commit();
               batch = db.batch();
               count = 0;
@@ -1780,7 +1701,6 @@
 
     function renderEmployees(list) {
       const tbody = document.getElementById("employeeBody");
-      if (!tbody) return;
       tbody.innerHTML = "";
       if (list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #718096;">No employees found.</td></tr>`;
