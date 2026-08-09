@@ -1726,7 +1726,7 @@
       await db.collection("employees").doc(empId).set({ canOverride: isAllowed }, { merge: true });
     }
 
-    async function manualEditPin(empId) {
+    async function manualEditPid(empId) {
       const pin = prompt(`Enter new PIN for ID ${empId}:`);
       if (pin && /^\d{6}$/.test(pin)) {
         await db.collection("employees").doc(empId).set({ pin: pin }, { merge: true });
